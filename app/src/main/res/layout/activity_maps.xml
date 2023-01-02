@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:map="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MapsActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/materialToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="?attr/actionBarSize"
+        map:navigationIcon="@mipmap/ic_launcher_foreground"
+        map:layout_constraintTop_toTopOf="parent"
+        map:title="@string/app_name"
+        map:titleTextColor="?attr/colorOnPrimaryContainer"
+        map:subtitleTextAppearance="@style/TextAppearance.Material3.BodySmall"
+        map:subtitle="test"/>
+
+
+    <HorizontalScrollView
+        android:id="@+id/scrollView2"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="5dp"
+        android:scrollbars="none"
+        android:elevation="1dp"
+        map:layout_constraintTop_toBottomOf="@+id/materialToolbar">
+
+        <LinearLayout
+            android:id="@+id/mainLinear"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/lofotenFab"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="5dp"
+                android:backgroundTint="?attr/colorSurface"
+                map:strokeColor="?attr/colorSurfaceVariant"
+                map:strokeWidth="1dp"
+                android:text="Lofoten"
+                android:textColor="?attr/colorOnSurface"
+                map:cornerRadius="50dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/scotlandFab"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="5dp"
+                android:backgroundTint="?attr/colorSurface"
+                map:strokeColor="?attr/colorSurfaceVariant"
+                map:strokeWidth="1dp"
+                android:text="Scotland"
+                android:textColor="?attr/colorOnSurface"
+                map:cornerRadius="50dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/icelandFab"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="5dp"
+                android:backgroundTint="?attr/colorSurface"
+                map:strokeColor="?attr/colorSurfaceVariant"
+                map:strokeWidth="1dp"
+                android:text="Iceland"
+                android:textColor="?attr/colorOnSurface"
+                map:cornerRadius="50dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/miscFab"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="5dp"
+                android:backgroundTint="?attr/colorSurface"
+                map:strokeColor="?attr/colorSurfaceVariant"
+                map:strokeWidth="1dp"
+                android:text="Misc"
+                android:textColor="?attr/colorOnSurface"
+                map:cornerRadius="50dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/moreFab"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="5dp"
+                android:backgroundTint="?attr/colorSurface"
+                map:strokeColor="?attr/colorSurfaceVariant"
+                map:strokeWidth="1dp"
+                android:text="More.."
+                android:textColor="?attr/colorOnSurface"
+                map:cornerRadius="50dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        map:layout_constraintTop_toBottomOf="@id/materialToolbar" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/satelliteFab"
+        style="@style/ThemeOverlay.Material3.FloatingActionButton.Primary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="30dp"
+        android:clickable="true"
+        android:src="@drawable/ic_baseline_satellite_24"
+        map:layout_constraintBottom_toTopOf="@+id/locationFab"
+        map:layout_constraintStart_toStartOf="@+id/map" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/locationFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="30dp"
+        android:clickable="true"
+        android:src="@drawable/ic_baseline_location_on_24"
+        map:layout_constraintBottom_toBottomOf="parent"
+        map:layout_constraintStart_toStartOf="@+id/map" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
