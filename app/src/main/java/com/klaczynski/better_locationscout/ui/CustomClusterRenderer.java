@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.ColorSpace;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.util.TypedValue;
@@ -20,6 +21,7 @@ import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
+import com.klaczynski.better_locationscout.Constants;
 import com.klaczynski.better_locationscout.R;
 import com.klaczynski.better_locationscout.obj.ClusterMarker;
 
@@ -56,10 +58,17 @@ public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker>
     @Override
     protected void onBeforeClusterItemRendered(@NonNull ClusterMarker item, @NonNull MarkerOptions markerOptions) {
         super.onBeforeClusterItemRendered(item, markerOptions);
-        iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker));
-        final Bitmap icon = iconGen.makeIcon();
-        markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
-        markerOptions.alpha((float)0.9);
+
+        if(item.getSnippet().contains(Constants.FAVE_STRING)) {
+            iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker_fav));
+            final Bitmap icon = iconGen.makeIcon();
+            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
+        } else {
+            iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker));
+            final Bitmap icon = iconGen.makeIcon();
+            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
+            markerOptions.alpha((float)0.9);
+        }
     }
 
     @Override

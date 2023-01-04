@@ -1,5 +1,7 @@
 package com.klaczynski.better_locationscout.obj;
 
+import com.google.android.gms.maps.model.Marker;
+
 public class Spot {
 
     double lat, lng;
@@ -13,6 +15,7 @@ public class Spot {
         this.imgurl = imgurl;
         this.url = url;
     }
+    public Spot(){}
 
     /**
      * @return the lat
@@ -84,5 +87,14 @@ public class Spot {
         this.url = url;
     }
 
+    public static Spot fromMarker(Marker m) {
+        Spot s = new Spot();
+        s.setName(m.getTitle());
+        s.setUrl(m.getSnippet().split("!!!")[0]);
+        s.setImgurl(m.getSnippet().split("!!!")[1]);
+        s.setLat(m.getPosition().latitude);
+        s.setLng(m.getPosition().longitude);
+        return s;
+    }
 
 }

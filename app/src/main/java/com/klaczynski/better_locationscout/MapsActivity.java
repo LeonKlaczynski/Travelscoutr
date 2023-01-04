@@ -35,6 +35,7 @@ import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
@@ -45,6 +46,7 @@ import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm
 import com.klaczynski.better_locationscout.databinding.ActivityMapsBinding;
 import com.klaczynski.better_locationscout.io.InOutOperations;
 import com.klaczynski.better_locationscout.obj.ClusterMarker;
+import com.klaczynski.better_locationscout.obj.MarkerLongClickListener;
 import com.klaczynski.better_locationscout.obj.Spot;
 import com.klaczynski.better_locationscout.ui.CustomClusterRenderer;
 import com.klaczynski.better_locationscout.ui.CustomInfoWindowAdapter;
@@ -189,6 +191,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //If location disabled, color fab gray
         if (!map.isMyLocationEnabled())
             locationFab.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.R.attr.colorOutline));
+        else if(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null){
+            LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(),
+                    lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
+            map.animateCamera(cameraUpdate);
+        }
 
         //We want to move the camera to my location when fab is clicked. If disabled, enable when initially pressed
         locationFab.setOnClickListener(new View.OnClickListener() {
@@ -312,6 +320,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 i.putExtra("lat", (float) latLng.latitude);
                 i.putExtra("lng", (float) latLng.longitude);
                 startActivity(i);
+            }
+        });
+        //favoriting stuff
+        clusterManager.setOnClusterItemInfoWindowLongClickListener(new ClusterManager.OnClusterItemInfoWindowLongClickListener<ClusterMarker>() {
+            @Override
+            public void onClusterItemInfoWindowLongClick(ClusterMarker item) {
+                Marker toRemove = null;
+                ClusterMarker toAdd = null;
+                for(Marker m : clusterManager.getMarkerCollection().getMarkers()) {
+                    if(m.getSnippet().equals(item.getSnippet()) && !m.getSnippet().contains(Constants.FAVE_STRING)) {
+                        toRemove = m;
+                        Spot spot = Spot.fromMarker(m);
+                        ClusterMarker marker = new ClusterMarker(new LatLng(spot.getLat(), spot.getLng()), spot);
+                        marker.setSnippet(m.getSnippet() + Constants.FAVE_STRING);
+                        toAdd = marker;
+                        break;
+                    }
+                }
+                clusterManager.getMarkerCollection().remove(toRemove);
+                clusterManager.addItem(toAdd);
+                clusterManager.onCameraIdle(); //idk y, but this updates the map and therefor the items on it.
+                Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
             }
         });
     }

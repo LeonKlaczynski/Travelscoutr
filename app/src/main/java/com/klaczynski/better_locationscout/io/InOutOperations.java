@@ -1,28 +1,19 @@
 package com.klaczynski.better_locationscout.io;
 
 import android.content.Context;
-import android.os.Environment;
 import android.widget.Toast;
 
 import com.klaczynski.better_locationscout.*;
 import com.klaczynski.better_locationscout.obj.Spot;
 
-import java.io.BufferedWriter;
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,8 +35,8 @@ public class InOutOperations {
 
         InputStream in;
         try {
-            Logger.log(TAG, "Downloading JSON from: "+Settings.URL);
-            in = new URL(Settings.URL).openStream();
+            Logger.log(TAG, "Downloading JSON from: "+ Constants.URL);
+            in = new URL(Constants.URL).openStream();
             DataInputStream dis = new DataInputStream(in);
             byte[] buffer = new byte[1024];
             int length;

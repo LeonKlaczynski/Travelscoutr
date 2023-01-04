@@ -31,4 +31,19 @@ public class ClusterMarker implements ClusterItem {
         return snippet;
     }
 
+    public void setLatLng(LatLng latLng) {
+        this.latLng = latLng;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setSnippet(String snippet) {
+        this.snippet = snippet;
+    }
+
+    public void setSpot(Spot spot) {
+        this.spot = spot;
+    }
 }
