@@ -1,31 +1,23 @@
-package com.klaczynski.better_locationscout.ui;
+package com.klaczynski.travelscoutr.ui;
 
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.ColorSpace;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
 import android.util.TypedValue;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
-import com.klaczynski.better_locationscout.Constants;
-import com.klaczynski.better_locationscout.R;
-import com.klaczynski.better_locationscout.obj.ClusterMarker;
-
-import java.util.ArrayList;
+import com.klaczynski.travelscoutr.Constants;
+import com.klaczynski.travelscoutr.R;
+import com.klaczynski.travelscoutr.obj.ClusterMarker;
 
 
 public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker> implements GoogleMap.OnCameraIdleListener {
@@ -61,6 +53,10 @@ public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker>
 
         if(item.getSnippet().contains(Constants.FAVE_STRING)) {
             iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker_fav));
+            final Bitmap icon = iconGen.makeIcon();
+            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
+        } else if(item.getSnippet().contains(Constants.FLICKR_STRING)) {
+            iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker_flickr));
             final Bitmap icon = iconGen.makeIcon();
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
         } else {

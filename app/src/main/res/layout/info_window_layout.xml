@@ -16,12 +16,14 @@
         style="@style/MaterialAlertDialog.Material3.Body.Text"
         android:textColor="?attr/colorOnSecondaryContainer"
         android:layout_marginBottom="10dp"/>
+
     <TextView
+        android:id="@+id/clickToOpen"
+        style="@style/MaterialAlertDialog.Material3.Body.Text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Click image to open on locationscout.net"
-        style="@style/MaterialAlertDialog.Material3.Body.Text"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="10dp"
+        android:text="Click image to open on locationscout.net" />
 
     <ImageView
         android:id="@+id/pictureView"

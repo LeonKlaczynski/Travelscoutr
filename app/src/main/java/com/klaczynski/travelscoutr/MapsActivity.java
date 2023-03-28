@@ -1,4 +1,4 @@
-package com.klaczynski.better_locationscout;
+package com.klaczynski.travelscoutr;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -26,16 +26,15 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.flickr4java.flickr.FlickrException;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
@@ -43,13 +42,13 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
-import com.klaczynski.better_locationscout.databinding.ActivityMapsBinding;
-import com.klaczynski.better_locationscout.io.InOutOperations;
-import com.klaczynski.better_locationscout.obj.ClusterMarker;
-import com.klaczynski.better_locationscout.obj.MarkerLongClickListener;
-import com.klaczynski.better_locationscout.obj.Spot;
-import com.klaczynski.better_locationscout.ui.CustomClusterRenderer;
-import com.klaczynski.better_locationscout.ui.CustomInfoWindowAdapter;
+import com.klaczynski.travelscoutr.databinding.ActivityMapsBinding;
+import com.klaczynski.travelscoutr.io.InOutOperations;
+import com.klaczynski.travelscoutr.net.FlickrSearcher;
+import com.klaczynski.travelscoutr.obj.ClusterMarker;
+import com.klaczynski.travelscoutr.obj.Spot;
+import com.klaczynski.travelscoutr.ui.CustomClusterRenderer;
+import com.klaczynski.travelscoutr.ui.CustomInfoWindowAdapter;
 
 import org.json.JSONException;
 
@@ -111,6 +110,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Handle favorite buttons
         handleFavorites();
 
+        //Sets actions to do with Flickr (initializing the search tool, assigns button action)
+        handleFlickr();
+
         //Yes, doing this on the main thread. Loving that. Maybe a TODO..
         try {
             InOutOperations.startConversion();
@@ -124,6 +126,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             setUpClusterer();
             toolbar.setSubtitle("Amount of spots loaded: " + InOutOperations.spots.size());
         }
+    }
+
+    private void handleFlickr() {
+        FlickrSearcher flickr = new FlickrSearcher(this);
+        ExtendedFloatingActionButton flickrFab = findViewById(R.id.flickrFab);
+        flickrFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    flickr.performSearch(map, clusterManager);
+                } catch (FlickrException e) {
+                    Log.e(TAG, "handleFlickr: "+ e, e);
+                }
+            }
+        });
     }
 
     private void handleFavorites() {
@@ -166,6 +183,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
             }
         });
+
+
     }
 
     @SuppressLint("MissingPermission")

@@ -1,10 +1,10 @@
-package com.klaczynski.better_locationscout.io;
+package com.klaczynski.travelscoutr.io;
 
 import android.content.Context;
 import android.widget.Toast;
 
-import com.klaczynski.better_locationscout.*;
-import com.klaczynski.better_locationscout.obj.Spot;
+import com.klaczynski.travelscoutr.*;
+import com.klaczynski.travelscoutr.obj.Spot;
 
 import java.io.DataInputStream;
 import java.io.FileNotFoundException;

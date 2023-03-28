@@ -1,4 +1,4 @@
-package com.klaczynski.better_locationscout;
+package com.klaczynski.travelscoutr;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

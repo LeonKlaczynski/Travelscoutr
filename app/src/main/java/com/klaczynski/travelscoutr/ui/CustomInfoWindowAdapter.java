@@ -1,7 +1,5 @@
-package com.klaczynski.better_locationscout.ui;
+package com.klaczynski.travelscoutr.ui;
 
-import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -10,7 +8,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
@@ -20,13 +17,11 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.load.resource.bitmap.CenterCrop;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestListener;
-import com.bumptech.glide.request.RequestOptions;
-import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.target.Target;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Marker;
-import com.klaczynski.better_locationscout.Logger;
-import com.klaczynski.better_locationscout.R;
+import com.klaczynski.travelscoutr.Constants;
+import com.klaczynski.travelscoutr.R;
 
 public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
@@ -41,6 +36,10 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
         final View popup = mInflater.inflate(R.layout.info_window_layout, null);
 
         ((TextView) popup.findViewById(R.id.title)).setText(marker.getTitle());
+
+        if(marker.getSnippet().contains(Constants.FLICKR_STRING))
+            ((TextView) popup.findViewById(R.id.clickToOpen)).setText("Click to open on flickr.com");
+
         ImageView pictureView = popup.findViewById(R.id.pictureView);
         String url = marker.getSnippet().split("!!!")[1] + "?h=300";
         Glide.with(popup).load(url).transform(new CenterCrop(),new RoundedCorners(25))
@@ -73,6 +72,10 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
         final View popup = mInflater.inflate(R.layout.info_window_layout, null);
 
         ((TextView) popup.findViewById(R.id.title)).setText(marker.getTitle());
+
+        if(marker.getSnippet().contains(Constants.FLICKR_STRING))
+            ((TextView) popup.findViewById(R.id.clickToOpen)).setText("Click to open on flickr.com");
+
         ImageView pictureView = popup.findViewById(R.id.pictureView);
         String url = marker.getSnippet().split("!!!")[1];
         Glide.with(popup).load(url).transform(new CenterCrop(),new RoundedCorners(25))

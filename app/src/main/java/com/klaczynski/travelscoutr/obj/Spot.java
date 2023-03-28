@@ -1,6 +1,7 @@
-package com.klaczynski.better_locationscout.obj;
+package com.klaczynski.travelscoutr.obj;
 
 import com.google.android.gms.maps.model.Marker;
+import com.klaczynski.travelscoutr.Constants;
 
 public class Spot {
 
@@ -90,8 +91,8 @@ public class Spot {
     public static Spot fromMarker(Marker m) {
         Spot s = new Spot();
         s.setName(m.getTitle());
-        s.setUrl(m.getSnippet().split("!!!")[0]);
-        s.setImgurl(m.getSnippet().split("!!!")[1]);
+        s.setUrl(m.getSnippet().split(Constants.SplitRegex)[0]);
+        s.setImgurl(m.getSnippet().split(Constants.SplitRegex)[1]);
         s.setLat(m.getPosition().latitude);
         s.setLng(m.getPosition().longitude);
         return s;

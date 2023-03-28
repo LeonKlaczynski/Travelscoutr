@@ -1,4 +1,4 @@
-package com.klaczynski.better_locationscout;
+package com.klaczynski.travelscoutr;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,8 +9,6 @@ import com.google.android.gms.maps.OnStreetViewPanoramaReadyCallback;
 import com.google.android.gms.maps.StreetViewPanorama;
 import com.google.android.gms.maps.SupportStreetViewPanoramaFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.StreetViewPanoramaCamera;
-import com.google.android.material.appbar.MaterialToolbar;
 
 public class StreetViewActivity extends AppCompatActivity implements OnStreetViewPanoramaReadyCallback {
 

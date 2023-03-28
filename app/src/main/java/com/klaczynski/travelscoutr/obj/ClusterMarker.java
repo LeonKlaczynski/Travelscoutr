@@ -1,4 +1,4 @@
-package com.klaczynski.better_locationscout.obj;
+package com.klaczynski.travelscoutr.obj;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.clustering.ClusterItem;
