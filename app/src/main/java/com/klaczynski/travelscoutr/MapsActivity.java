@@ -43,7 +43,10 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationBarMenu;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.clustering.Cluster;
@@ -78,6 +81,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     int itemSize = 0;
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
     boolean favoritesOnly = true;
+
+    NavigationBarView navBar;
+    Menu navMenu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,6 +141,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             setUpClusterer();
             toolbar.setSubtitle("Amount of spots loaded: " + InOutOperations.spots.size());
         }
+
         //
         loadFavorites();
 
@@ -144,17 +151,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setMenuOptions() {
-        Menu menu = toolbar.getMenu();
-        menu.findItem(R.id.showFavesMenu).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+        navMenu.findItem(R.id.favoritesNavItem).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
-            public boolean onMenuItemClick(MenuItem menuItem) {
+            public boolean onMenuItemClick(MenuItem item) {
                 Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
                 startActivity(i);
                 return false;
             }
         });
-
-
     }
 
     private void setDisplayMode() {
@@ -168,7 +172,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void handleFlickr() {
         FlickrSearcher flickr = new FlickrSearcher(this);
-        MaterialButton flickrBtn = findViewById(R.id.flickrFab);
+        ExtendedFloatingActionButton flickrBtn = findViewById(R.id.flickrFab);
         flickrBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -233,6 +237,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
         int colorOn = ContextCompat.getColor(this, typedValue.resourceId);
         toolbar = findViewById(R.id.materialToolbar);
+        navBar = findViewById(R.id.navigationRailView);
+        navMenu = navBar.getMenu();
 
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -317,14 +323,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
-        FloatingActionButton favoritesFab = findViewById(R.id.favoritesFab);
+        /*FloatingActionButton favoritesFab = findViewById(R.id.favoritesFab);
         favoritesFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
                 startActivity(i);
             }
-        });
+        });*/
     }
 
     private void setUpClusterer() {
@@ -577,5 +583,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         if(clusterManager != null) loadFavorites();
+        if(navBar != null) navBar.setSelectedItemId(R.id.homeNavItem);
     }
 }

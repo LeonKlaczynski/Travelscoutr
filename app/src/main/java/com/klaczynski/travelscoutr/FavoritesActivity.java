@@ -22,6 +22,8 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -41,6 +43,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.clustering.Cluster;
@@ -64,6 +67,9 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
     MaterialToolbar toolbar;
     LocationManager lm;
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
+
+    NavigationBarView navBar;
+    Menu navMenu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,6 +114,14 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
                 onBackPressed();
             }
         });
+        navBar.setSelectedItemId(R.id.favoritesNavItem);
+        navMenu.findItem(R.id.homeNavItem).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                onBackPressed();
+                return false;
+            }
+        });
     }
 
     @SuppressLint("MissingPermission")
@@ -119,6 +133,8 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
         int colorOn = ContextCompat.getColor(this, typedValue.resourceId);
         toolbar = findViewById(R.id.materialToolbar);
+        navBar = findViewById(R.id.navigationRailView);
+        navMenu = navBar.getMenu();
 
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {

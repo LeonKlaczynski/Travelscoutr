@@ -38,6 +38,6 @@
         <item name="colorOnFlickr">#3e1c6f</item>
         <item name="colorFlickrContainer">#553587</item>
         <item name="colorOnFlickrContainer">#ecdcff</item>
-        <item name="harmonizeFlickr">false</item>
+        <item name="harmonizeFlickr">true</item>
     </style>
 </resources>
