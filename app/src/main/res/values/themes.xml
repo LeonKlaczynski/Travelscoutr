@@ -29,5 +29,15 @@
         <item name="colorPrimaryInverse">@color/md_theme_light_inversePrimary</item>
         <item name="android:statusBarColor" >?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="colorFavorite">#c00313</item>
+        <item name="colorOnFavorite">#ffffff</item>
+        <item name="colorFavoriteContainer">#ffdad6</item>
+        <item name="colorOnFavoriteContainer">#410002</item>
+        <item name="harmonizeFavorite">true</item>
+        <item name="colorFlickr">#6e4da1</item>
+        <item name="colorOnFlickr">#ffffff</item>
+        <item name="colorFlickrContainer">#ecdcff</item>
+        <item name="colorOnFlickrContainer">#280057</item>
+        <item name="harmonizeFlickr">false</item>
     </style>
 </resources>

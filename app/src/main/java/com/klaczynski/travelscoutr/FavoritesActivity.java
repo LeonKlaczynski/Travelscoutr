@@ -2,8 +2,10 @@ package com.klaczynski.travelscoutr;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -15,25 +17,19 @@ import android.graphics.drawable.ColorDrawable;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.StrictMode;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
-import com.bumptech.glide.Glide;
-import com.flickr4java.flickr.FlickrException;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -44,70 +40,46 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
-import com.klaczynski.travelscoutr.databinding.ActivityMapsBinding;
-import com.klaczynski.travelscoutr.io.InOutOperations;
-import com.klaczynski.travelscoutr.net.FlickrSearcher;
 import com.klaczynski.travelscoutr.obj.ClusterMarker;
-import com.klaczynski.travelscoutr.obj.Spot;
-import com.klaczynski.travelscoutr.ui.CustomClusterRenderer;
+import com.klaczynski.travelscoutr.ui.CustomFavClusterRenderer;
 import com.klaczynski.travelscoutr.ui.CustomInfoWindowAdapter;
-
-import org.json.JSONException;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class FavoritesActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap map;
     private ClusterManager<ClusterMarker> clusterManager;
     private DisplayMetrics metrics = new DisplayMetrics();
-
-    private ActivityMapsBinding binding;
-    public static String filesDir;
     public static final String TAG = "MapsActivity";
     public static Context context;
     MaterialToolbar toolbar;
     LocationManager lm;
-    int itemSize = 0;
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
-    boolean favoritesOnly = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        filesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        Logger.log(TAG, filesDir);
         context = this;
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
 
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_favorites);
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+                .findFragmentById(R.id.favoritesMap);
         mapFragment.getMapAsync(this);
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
-
-        //Clear Glide cache to confirm images will be up-to-date & avoid massive cache build-up.
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Glide.get(context).clearDiskCache();
-            }
-        }).start();
-
     }
 
     @Override
@@ -119,114 +91,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Location fab & enable my location if possible
         setupLocationAndPermissions();
 
-        //Handle preset view buttons
-        handlePresets();
+        //Setting up the clusterManager
+        setUpClusterer();
 
-        //Sets actions to do with Flickr (initializing the search tool, assigns button action)
-        handleFlickr();
-
-        //Yes, doing this on the main thread. Loving that. Maybe a TODO..
-        try {
-            InOutOperations.startConversion();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        if (InOutOperations.spots.size() == 0) {
-            Toast.makeText(context, "No spots were loaded. Network issues?", Toast.LENGTH_SHORT).show();
-        } else {
-            setUpClusterer();
-            toolbar.setSubtitle("Amount of spots loaded: " + InOutOperations.spots.size());
-        }
-        //
+        //Load all favorites from sharedPrefs
         loadFavorites();
-
-        setDisplayMode();
 
         setMenuOptions();
     }
 
     private void setMenuOptions() {
-        Menu menu = toolbar.getMenu();
-        menu.findItem(R.id.showFavesMenu).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+        toolbar.setNavigationIcon(R.drawable.ic_baseline_arrow_back_24);
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onMenuItemClick(MenuItem menuItem) {
-                Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
-                startActivity(i);
-                return false;
+            public void onClick(View v) {
+                onBackPressed();
             }
         });
-
-
-    }
-
-    private void setDisplayMode() {
-            for(Marker m : clusterManager.getMarkerCollection().getMarkers()) {
-                if(!m.getSnippet().contains(Constants.FAVE_STRING)) {
-                    m.setVisible(!favoritesOnly);
-                }
-            }
-        clusterManager.onCameraIdle();
-    }
-
-    private void handleFlickr() {
-        FlickrSearcher flickr = new FlickrSearcher(this);
-        MaterialButton flickrBtn = findViewById(R.id.flickrFab);
-        flickrBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(MapsActivity.this, "Searching flickr..", Toast.LENGTH_SHORT).show();
-                try {
-                    flickr.performSearch(map, clusterManager);
-                } catch (FlickrException e) {
-                    Log.e(TAG, "handleFlickr: " + e, e);
-                }
-            }
-        });
-    }
-
-    private void handlePresets() {
-        MaterialButton lofotenFab = findViewById(R.id.lofotenFab);
-        lofotenFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng latLng = new LatLng(68.36315324768857, 14.898834563791752);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.5);
-                map.animateCamera(cameraUpdate);
-            }
-        });
-
-        MaterialButton scotlandFab = findViewById(R.id.scotlandFab);
-        scotlandFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng latLng = new LatLng(57.322641848476735, -4.313399456441402);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.9);
-                map.animateCamera(cameraUpdate);
-            }
-        });
-
-        MaterialButton icelandFab = findViewById(R.id.icelandFab);
-        icelandFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng latLng = new LatLng(65.2742675631778, -19.45199064910412);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 5.57);
-                map.animateCamera(cameraUpdate);
-            }
-        });
-
-        MaterialButton miscFab = findViewById(R.id.miscFab);
-        miscFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng toSave = map.getCameraPosition().target;
-                float zoom = map.getCameraPosition().zoom;
-                Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
-            }
-        });
-
-
     }
 
     @SuppressLint("MissingPermission")
@@ -273,7 +154,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     map.setMyLocationEnabled(true);
                     locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
                 } else {
-                    Toast.makeText(MapsActivity.this, "Not able to get location. Are permissions granted?", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(FavoritesActivity.this, "Not able to get location. Are permissions granted?", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -293,7 +174,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return true;
             }
         });
-
     }
 
     private void setupMapUiAndStyle() {
@@ -323,38 +203,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
-        FloatingActionButton favoritesFab = findViewById(R.id.favoritesFab);
-        favoritesFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
-                startActivity(i);
-            }
-        });
     }
 
 
     private void setUpClusterer() {
         clusterManager = new ClusterManager<>(this, map);
         clusterManager.setAnimation(true);
-        CustomClusterRenderer renderer = new CustomClusterRenderer(this, map, clusterManager);
+        CustomFavClusterRenderer renderer = new CustomFavClusterRenderer(this, map, clusterManager);
         clusterManager.setRenderer(renderer);
         clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<ClusterMarker>(
                 metrics.widthPixels, metrics.heightPixels));
         clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this)));
-        addItemsToClusterer();
         handleInteractions(clusterManager, map, renderer);
-
     }
 
-    private void handleInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomClusterRenderer renderer) {
+    private void handleInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomFavClusterRenderer renderer) {
         map.setOnCameraIdleListener(clusterManager);
         clusterManager.setOnClusterItemInfoWindowClickListener(new ClusterManager.OnClusterItemInfoWindowClickListener<ClusterMarker>() {
             @Override
             public void onClusterItemInfoWindowClick(ClusterMarker item) {
                 String url = item.getSnippet().split("!!!")[0];
 
-                Dialog dialog = new Dialog(MapsActivity.this);
+                Dialog dialog = new Dialog(FavoritesActivity.this);
                 dialog.setContentView(R.layout.actions_dialog);
                 dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                 dialog.show();
@@ -384,20 +254,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 });
 
                 MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
+                favoriteBtn.setText("Remove from favourites");
                 favoriteBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         dialog.dismiss();
-                        if (favoritesContains(item)) {
-                            Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
+                        if (item.getSnippet().contains(Constants.FAVE_STRING) || favorites.contains(item)) {
+                            removeFromFavorites(item);
+                            Toast.makeText(context, "Removed from favorites!", Toast.LENGTH_SHORT).show();
+                            refreshFavorites();
                             return;
                         }
-
-                        item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
-                        clusterManager.addItem(item);
-                        favorites.add(item);
-                        Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding "+item.getSnippet());
                         refreshFavorites();
                         saveFavorites();
                     }
@@ -418,6 +285,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public boolean onClusterItemClick(ClusterMarker item) {
                 Marker marker = renderer.getMarker(item);
+
                 Log.d(TAG, "Marker clicked: " + marker.getTitle());
                 if (marker.equals(currentShown)) {
                     marker.hideInfoWindow();
@@ -440,7 +308,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(@NonNull LatLng latLng) {
-                Intent i = new Intent(MapsActivity.this, StreetViewActivity.class);
+                Intent i = new Intent(FavoritesActivity.this, StreetViewActivity.class);
                 i.putExtra("lat", (float) latLng.latitude);
                 i.putExtra("lng", (float) latLng.longitude);
                 startActivity(i);
@@ -452,7 +320,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClusterItemInfoWindowLongClick(ClusterMarker item) {
                 String url = item.getSnippet().split("!!!")[0];
 
-                Dialog dialog = new Dialog(MapsActivity.this);
+                Dialog dialog = new Dialog(FavoritesActivity.this);
                 dialog.setContentView(R.layout.actions_dialog);
                 dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
                 dialog.show();
@@ -482,20 +350,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 });
 
                 MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
+                favoriteBtn.setText("Remove from favourites");
                 favoriteBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         dialog.dismiss();
-                        if (favoritesContains(item)) {
-                            Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
+                        if (item.getSnippet().contains(Constants.FAVE_STRING) || favorites.contains(item)) {
+                            removeFromFavorites(item);
+                            Toast.makeText(context, "Removed from favorites!", Toast.LENGTH_SHORT).show();
+                            refreshFavorites();
                             return;
                         }
-
-                        item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
-                        clusterManager.addItem(item);
-                        favorites.add(item);
-                        Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding "+item.getSnippet());
                         refreshFavorites();
                         saveFavorites();
                     }
@@ -512,16 +377,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    private boolean favoritesContains(ClusterMarker item) {
-        for(ClusterMarker toCompare : favorites) {
-            if (toCompare.getPosition().equals(item.getPosition())) return true;
-        }
-        return false;
-    }
+    void removeDuplicateFavorites() {
+        ArrayList<ClusterMarker> tempFaves = favorites;
 
+        if(favorites.size() > 1) {
+            for(int l = 0; l < favorites.size(); l++) {
+                ClusterMarker i = favorites.get(l);
+                for (int k = 0; k < favorites.size(); k++) {
+                    ClusterMarker j = favorites.get(k);
+                    if(i.getSnippet().equals(j.getSnippet())) {
+                        tempFaves.remove(j);
+                        Log.d(TAG, "checkDuplicates: duplicate found! " + j.getSnippet());
+                    }
+                }
+            }
+        }
+        favorites = tempFaves;
+        refreshFavorites();
+    }
 
     void refreshFavorites() {
         clusterManager.cluster();
+        toolbar.setSubtitle("Amount of favourites loaded: "+favorites.size());
     }
 
     private void loadFavorites() {
@@ -538,6 +415,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if (!faves_json.equals("")) favorites = gson.fromJson(faves_json, type);
 
+
         if (!favorites.isEmpty()) {
             for (ClusterMarker faveMarker : favorites) {
                 clusterManager.addItem(faveMarker);
@@ -545,6 +423,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             clusterManager.onCameraIdle(); //idk y, but this updates the map and therefor the items on it.
         }
         saveFavorites();
+        refreshFavorites();
     }
 
     void saveFavorites() {
@@ -564,26 +443,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ArrayList<ClusterMarker> tempFavorites = favorites;
         for(int i = 0; i < favorites.size(); i++) {
             ClusterMarker toCompare = favorites.get(i);
-            if(toCompare.getSnippet().equals(toRemove.getSnippet()))
+            if(toCompare.getSnippet().equals(toRemove.getSnippet())) {
                 tempFavorites.remove(toRemove);
+                clusterManager.removeItem(toRemove);
+            }
         }
         favorites = tempFavorites;
         saveFavorites();
-    }
-
-    private void addItemsToClusterer() {
-        ArrayList<ClusterMarker> markers = new ArrayList<>();
-        for (Spot spot : InOutOperations.spots) {
-            ClusterMarker marker = new ClusterMarker(new LatLng(spot.getLat(), spot.getLng()), spot);
-            markers.add(marker);
-        }
-        clusterManager.addItems(markers);
-        itemSize = markers.size();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if(clusterManager != null) loadFavorites();
+        refreshFavorites();
     }
 }

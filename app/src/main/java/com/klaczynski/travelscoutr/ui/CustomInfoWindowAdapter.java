@@ -37,7 +37,7 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
         ((TextView) popup.findViewById(R.id.title)).setText(marker.getTitle());
 
-        if(marker.getSnippet().contains(Constants.FLICKR_STRING))
+        if(marker.getSnippet().contains("flickr.com"))
             ((TextView) popup.findViewById(R.id.clickToOpen)).setText("Click to open on flickr.com");
 
         ImageView pictureView = popup.findViewById(R.id.pictureView);

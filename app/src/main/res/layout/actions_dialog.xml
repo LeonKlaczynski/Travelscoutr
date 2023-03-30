@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dialogcardview"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="20dp"
+    app:strokeWidth="0dp"
+    android:layout_gravity="center_horizontal">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_margin="10dp"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Choose an option"
+            style="@style/TextAppearance.Material3.BodyLarge"
+            android:layout_marginBottom="10dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonShow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show on locationscout.com" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonDirections"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Directions to spot" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonAddFavorite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add to favourites" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonCancel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cancel" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

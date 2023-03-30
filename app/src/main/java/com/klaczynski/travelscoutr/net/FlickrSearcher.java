@@ -21,28 +21,34 @@ import com.klaczynski.travelscoutr.obj.Spot;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Objects;
 
 public class FlickrSearcher {
 
     static Flickr flickr;
     private Context context;
     public static final String TAG = "FlickrSearcher";
+    private Toast toast;
+    ArrayList<Toast> activeToasts = new ArrayList<>();
 
     ArrayList<ClusterMarker> flickrMarkers = new ArrayList<>();
 
     public FlickrSearcher(Context context) {
         this.context = context;
+        toast = new Toast(context);
         flickr = new Flickr(context.getString(R.string.flickrApiKey), context.getString(R.string.flickrApiSecret), new REST());
-        Log.d(TAG, "FlickrSearcher: "+context.getString(R.string.flickrApiKey));
+        Log.d(TAG, "FlickrSearcher: " + context.getString(R.string.flickrApiKey));
     }
 
     /**
      * Searches flickr images that are currently located on the viewable map
+     *
      * @param clusterManager The cluster manager used on the map, used to add search results to the cluster and therefore the map.
-     * @param map The displayed map, used to retrieve the current viewport (we're searching flickr using a bounding box).
+     * @param map            The displayed map, used to retrieve the current viewport (we're searching flickr using a bounding box).
      */
     public void performSearch(GoogleMap map, ClusterManager clusterManager) throws FlickrException {
         double maxLat, minLat, maxLong, minLong;
+        for (Toast toast : activeToasts) toast.cancel();
         maxLat = map.getProjection().getVisibleRegion().latLngBounds.northeast.latitude;
         maxLong = map.getProjection().getVisibleRegion().latLngBounds.northeast.longitude;
         minLat = map.getProjection().getVisibleRegion().latLngBounds.southwest.latitude;
@@ -52,11 +58,12 @@ public class FlickrSearcher {
         SearchParameters parameters = new SearchParameters();
         parameters.setExtras(Collections.singleton("geo"));
         parameters.setBBox(String.valueOf(minLong), String.valueOf(minLat), String.valueOf(maxLong), String.valueOf(maxLat));
-        PhotoList photoList = photosInterface.search(parameters, 250, 1);
+        PhotoList<Photo> photoList = photosInterface.search(parameters, 250, 1);
 
         ArrayList<ClusterMarker> markersToAdd = new ArrayList<>();
-        for(Photo photo : (ArrayList<Photo>) photoList) {
-            if(photo.hasGeoData()) {
+        boolean hasDuplicates = false;
+        for (Photo photo : photoList) {
+            if (photo.hasGeoData()) {
                 Spot s = new Spot();
                 s.setName(photo.getTitle());
                 s.setUrl("http://www.flickr.com/" + photo.getOwner().getId() + "/" + photo.getId());
@@ -66,10 +73,23 @@ public class FlickrSearcher {
 
                 ClusterMarker marker = new ClusterMarker(new LatLng(s.getLat(), s.getLng()), s);
                 marker.setSnippet(marker.getSnippet() + Constants.FLICKR_STRING);
-                markersToAdd.add(marker);
+
+                //Checking for dupes
+                for (ClusterMarker toCompare : flickrMarkers) {
+                    hasDuplicates = Objects.equals(toCompare.getSnippet(), marker.getSnippet());
+                    if(hasDuplicates) break;
+                }
+                if(!hasDuplicates) markersToAdd.add(marker);
+
             }
         }
-        Toast.makeText(context, "Displaying " + markersToAdd.size() + " photos of total " + photoList.getTotal() + " flickr search results!", Toast.LENGTH_LONG).show();
+        if(hasDuplicates && markersToAdd.size() == 0) toast = Toast.makeText(context, "No new search results were found!", Toast.LENGTH_LONG);
+        if(hasDuplicates) toast = Toast.makeText(context, "Updating map with " + markersToAdd.size() + " added search results!", Toast.LENGTH_LONG);
+        if (!hasDuplicates && markersToAdd.size() < 250) toast = Toast.makeText(context, "Adding " + markersToAdd.size() + " flickr search results!", Toast.LENGTH_LONG);
+        else toast = Toast.makeText(context, "Displaying " + markersToAdd.size() + " photos of total " + photoList.getTotal() + " flickr search results!", Toast.LENGTH_LONG);
+        activeToasts.add(toast);
+        toast.show();
+
         clusterManager.addItems(markersToAdd);
         flickrMarkers.addAll(markersToAdd);
         clusterManager.onCameraIdle();

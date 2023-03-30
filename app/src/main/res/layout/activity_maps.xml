@@ -13,6 +13,7 @@
         android:minHeight="?attr/actionBarSize"
         map:layout_constraintTop_toTopOf="parent"
         map:navigationIcon="@mipmap/ic_launcher_foreground"
+        map:menu="@menu/menu_main"
         map:subtitle="test"
         map:subtitleTextAppearance="@style/TextAppearance.Material3.BodySmall"
         map:title="@string/app_name"
@@ -23,16 +24,17 @@
         android:id="@+id/scrollView2"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:layout_marginTop="5dp"
         android:elevation="1dp"
         android:scrollbars="none"
-        map:layout_constraintTop_toBottomOf="@+id/materialToolbar">
+        map:layout_constraintTop_toBottomOf="@+id/materialToolbar"
+        android:background="?attr/colorSurface">
 
         <LinearLayout
             android:id="@+id/mainLinear"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
 
             <com.google.android.material.button.MaterialButton
@@ -43,9 +45,7 @@
                 android:backgroundTint="?attr/colorSurface"
                 android:text="Lofoten"
                 android:textColor="?attr/colorOnSurface"
-                map:cornerRadius="50dp"
-                map:strokeColor="?attr/colorSurfaceVariant"
-                map:strokeWidth="1dp" />
+                map:cornerRadius="50dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/scotlandFab"
@@ -55,9 +55,7 @@
                 android:backgroundTint="?attr/colorSurface"
                 android:text="Scotland"
                 android:textColor="?attr/colorOnSurface"
-                map:cornerRadius="50dp"
-                map:strokeColor="?attr/colorSurfaceVariant"
-                map:strokeWidth="1dp" />
+                map:cornerRadius="50dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/icelandFab"
@@ -67,9 +65,7 @@
                 android:backgroundTint="?attr/colorSurface"
                 android:text="Iceland"
                 android:textColor="?attr/colorOnSurface"
-                map:cornerRadius="50dp"
-                map:strokeColor="?attr/colorSurfaceVariant"
-                map:strokeWidth="1dp" />
+                map:cornerRadius="50dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/miscFab"
@@ -79,9 +75,7 @@
                 android:backgroundTint="?attr/colorSurface"
                 android:text="Misc"
                 android:textColor="?attr/colorOnSurface"
-                map:cornerRadius="50dp"
-                map:strokeColor="?attr/colorSurfaceVariant"
-                map:strokeWidth="1dp" />
+                map:cornerRadius="50dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/moreFab"
@@ -91,12 +85,9 @@
                 android:backgroundTint="?attr/colorSurface"
                 android:text="More.."
                 android:textColor="?attr/colorOnSurface"
-                map:cornerRadius="50dp"
-                map:strokeColor="?attr/colorSurfaceVariant"
-                map:strokeWidth="1dp" />
+                map:cornerRadius="50dp" />
         </LinearLayout>
     </HorizontalScrollView>
-
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/map"
@@ -104,6 +95,21 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         map:layout_constraintTop_toBottomOf="@id/materialToolbar" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/flickrFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="30dp"
+        android:clickable="true"
+        android:drawableLeft="@drawable/ic_baseline_search_15"
+        android:drawableTint="?attr/colorOnPrimary"
+        android:elevation="2dp"
+        android:text="Search Flickr here"
+        map:cornerRadius="20dp"
+        map:layout_constraintBottom_toBottomOf="parent"
+        map:layout_constraintEnd_toEndOf="parent"
+        map:layout_constraintStart_toStartOf="parent"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/satelliteFab"
@@ -122,18 +128,17 @@
         android:layout_height="wrap_content"
         android:layout_margin="30dp"
         android:clickable="true"
-        android:src="@drawable/ic_baseline_location_on_24"
+        android:src="@drawable/ic_baseline_my_location_24"
         map:layout_constraintBottom_toBottomOf="parent"
         map:layout_constraintStart_toStartOf="@+id/map" />
 
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/flickrFab"
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/favoritesFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="30dp"
         android:clickable="true"
-        android:drawableStart="@drawable/ic_baseline_location_on_24"
-        android:text="Flickr search"
+        android:src="@drawable/ic_baseline_favorite_24"
         map:layout_constraintBottom_toBottomOf="parent"
         map:layout_constraintEnd_toEndOf="@+id/map" />
 

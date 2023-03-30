@@ -1,4 +1,4 @@
-package com.klaczynski.better_locationscout;
+package com.klaczynski.travelscoutr;
 
 import android.content.Context;
 

@@ -1,0 +1,13 @@
+
+<resources>
+    <attr name="colorFavorite" format="color" />
+    <attr name="colorOnFavorite" format="color" />
+    <attr name="colorFavoriteContainer" format="color" />
+    <attr name="colorOnFavoriteContainer" format="color" />
+    <attr name="harmonizeFavorite" format="boolean" />
+    <attr name="colorFlickr" format="color" />
+    <attr name="colorOnFlickr" format="color" />
+    <attr name="colorFlickrContainer" format="color" />
+    <attr name="colorOnFlickrContainer" format="color" />
+    <attr name="harmonizeFlickr" format="boolean" />
+</resources>
