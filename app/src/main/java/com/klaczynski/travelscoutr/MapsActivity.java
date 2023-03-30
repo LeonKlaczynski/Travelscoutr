@@ -25,7 +25,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -44,7 +43,6 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -107,7 +105,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Glide.get(context).clearDiskCache();
             }
         }).start();
-
     }
 
     @Override
@@ -225,8 +222,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
             }
         });
-
-
     }
 
     @SuppressLint("MissingPermission")
@@ -277,7 +272,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
-
 
         locationFab.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
@@ -332,7 +326,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
     }
-
 
     private void setUpClusterer() {
         clusterManager = new ClusterManager<>(this, map);
@@ -518,7 +511,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         return false;
     }
-
 
     void refreshFavorites() {
         clusterManager.cluster();

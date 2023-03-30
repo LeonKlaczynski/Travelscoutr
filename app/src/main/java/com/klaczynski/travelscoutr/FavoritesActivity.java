@@ -159,7 +159,6 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
             }
         });
 
-
         locationFab.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
@@ -204,7 +203,6 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
             }
         });
     }
-
 
     private void setUpClusterer() {
         clusterManager = new ClusterManager<>(this, map);
@@ -375,25 +373,6 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
                 });
             }
         });
-    }
-
-    void removeDuplicateFavorites() {
-        ArrayList<ClusterMarker> tempFaves = favorites;
-
-        if(favorites.size() > 1) {
-            for(int l = 0; l < favorites.size(); l++) {
-                ClusterMarker i = favorites.get(l);
-                for (int k = 0; k < favorites.size(); k++) {
-                    ClusterMarker j = favorites.get(k);
-                    if(i.getSnippet().equals(j.getSnippet())) {
-                        tempFaves.remove(j);
-                        Log.d(TAG, "checkDuplicates: duplicate found! " + j.getSnippet());
-                    }
-                }
-            }
-        }
-        favorites = tempFaves;
-        refreshFavorites();
     }
 
     void refreshFavorites() {
