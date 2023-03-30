@@ -3,7 +3,7 @@
     <item
         android:id="@+id/homeNavItem"
         android:icon="@drawable/ic_baseline_map_24"
-        android:title="Map"/>
+        android:title="All items"/>
 
     <item
         android:id="@+id/favoritesNavItem"
