@@ -24,11 +24,13 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentActivity;
 
 import com.bumptech.glide.Glide;
@@ -45,8 +47,8 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.navigation.NavigationBarMenu;
 import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.navigation.NavigationView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.clustering.Cluster;
@@ -82,7 +84,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
     boolean favoritesOnly = true;
 
+    DrawerLayout drawerLayout;
     NavigationBarView navBar;
+    NavigationView drawer;
     Menu navMenu;
 
     @Override
@@ -92,6 +96,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Logger.log(TAG, filesDir);
         context = this;
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -139,7 +144,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Toast.makeText(context, "No spots were loaded. Network issues?", Toast.LENGTH_SHORT).show();
         } else {
             setUpClusterer();
-            toolbar.setSubtitle("Amount of spots loaded: " + InOutOperations.spots.size());
         }
 
         //
@@ -147,10 +151,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setDisplayMode();
 
-        setMenuOptions();
+        setupNavigation();
     }
 
-    private void setMenuOptions() {
+    private void setupNavigation() {
+        toolbar = findViewById(R.id.materialToolbar);
+        navBar = findViewById(R.id.navigationRailView);
+        navMenu = navBar.getMenu();
+        drawerLayout = findViewById(R.id.drawerLayout);
+        drawer = findViewById(R.id.navigationView);
+        MenuItem drawerAllItems = drawer.getMenu().findItem(R.id.drawer_allItems);
+        MenuItem drawerFavorites = drawer.getMenu().findItem(R.id.drawer_favorites);
+        MenuItem drawerMyLocation = drawer.getMenu().findItem(R.id.drawer_myLocation);
+        MenuItem drawerSatellite = drawer.getMenu().findItem(R.id.drawer_satelliteToggle);
+        toolbar.setSubtitle("Amount of spots loaded: " + InOutOperations.spots.size());
+        TextView drawerSubtitle = drawer.getHeaderView(0).findViewById(R.id.drawer_subtitle);
+        drawerSubtitle.setText("Amount of spots loaded: " + InOutOperations.spots.size());
+        drawerAllItems.setChecked(true);
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.open();
+            }
+        });
+
         navMenu.findItem(R.id.favoritesNavItem).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -159,6 +183,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return false;
             }
         });
+
+        drawerFavorites.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                drawerLayout.close();
+                Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
+                startActivity(i);
+                return false;
+            }
+        });
+
+        //Todo set actions for remaining navitems
     }
 
     private void setDisplayMode() {
@@ -236,9 +272,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         int colorOff = ContextCompat.getColor(this, typedValue.resourceId);
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
         int colorOn = ContextCompat.getColor(this, typedValue.resourceId);
-        toolbar = findViewById(R.id.materialToolbar);
-        navBar = findViewById(R.id.navigationRailView);
-        navMenu = navBar.getMenu();
 
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {

@@ -1,0 +1,57 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/main_item"
+        android:title="Navigation">
+        <menu>
+            <item
+                android:id="@+id/drawer_allItems"
+                android:icon="@drawable/ic_baseline_map_24"
+                android:title="All items"
+                android:checkable="true" />
+            <item
+                android:id="@+id/drawer_favorites"
+                android:icon="@drawable/ic_baseline_favorite_24"
+                android:title="Favourites"
+                android:checkable="true" />
+        </menu>
+    </item>
+    <item
+        android:id="@+id/options_item"
+        android:title="Options">
+        <menu>
+            <item
+                android:id="@+id/drawer_myLocation"
+                android:icon="@drawable/ic_baseline_my_location_24"
+                android:title="My location"
+                android:checkable="true" />
+
+            <item
+                android:id="@+id/drawer_satelliteToggle"
+                android:icon="@drawable/ic_baseline_satellite_24"
+                android:title="Sattelite view"
+                android:checkable="true" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/starred_areas"
+        android:title="Starred areas">
+        <menu>
+            <item
+                android:id="@+id/LofotenNavItem"
+                android:icon="@drawable/ic_baseline_star_24"
+                android:title="Lofoten (Arctic Norway)"
+                android:checkable="true" />
+            <item
+                android:id="@+id/ScotlandNavItem"
+                android:icon="@drawable/ic_baseline_star_24"
+                android:title="Scotland"
+                android:checkable="true" />
+            <item
+                android:id="@+id/IcelandNavItem"
+                android:icon="@drawable/ic_baseline_star_24"
+                android:title="Iceland"
+                android:checkable="true" />
+        </menu>
+    </item>
+</menu>
