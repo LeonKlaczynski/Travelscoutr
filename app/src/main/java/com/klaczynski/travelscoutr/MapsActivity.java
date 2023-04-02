@@ -20,10 +20,15 @@ import android.os.StrictMode;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,6 +50,7 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationBarView;
@@ -56,6 +62,7 @@ import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
 import com.klaczynski.travelscoutr.databinding.ActivityMapsBinding;
 import com.klaczynski.travelscoutr.io.InOutOperations;
+import com.klaczynski.travelscoutr.io.Searcher;
 import com.klaczynski.travelscoutr.net.FlickrSearcher;
 import com.klaczynski.travelscoutr.obj.ClusterMarker;
 import com.klaczynski.travelscoutr.obj.Spot;
@@ -89,6 +96,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     NavigationView drawer;
     Menu navMenu;
 
+    Searcher searcher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,7 +105,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Logger.log(TAG, filesDir);
         context = this;
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
+        searcher = new Searcher(this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -127,9 +136,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Location fab & enable my location if possible
         setupLocationAndPermissions();
 
-        //Handle preset view buttons
-        handlePresets();
-
         //Sets actions to do with Flickr (initializing the search tool, assigns button action)
         handleFlickr();
 
@@ -151,24 +157,101 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setDisplayMode();
 
-        setupNavigation();
+        setupNavigationAndUX();
     }
 
-    private void setupNavigation() {
-        toolbar = findViewById(R.id.materialToolbar);
+    private void setupNavigationAndUX() {
         navBar = findViewById(R.id.navigationRailView);
         navMenu = navBar.getMenu();
         drawerLayout = findViewById(R.id.drawerLayout);
         drawer = findViewById(R.id.navigationView);
+        ImageView cardSearchBtn = findViewById(R.id.cardSearchIcon);
+        ImageView cardNavIcon = findViewById(R.id.cardNavIcon);
+        TextView cardAppLabel = findViewById(R.id.cardAppLabel);
+        TextView drawerSubtitle = drawer.getHeaderView(0).findViewById(R.id.drawer_subtitle);
+        EditText cardAppSearchText = findViewById(R.id.cardAppSearchText);
         MenuItem drawerAllItems = drawer.getMenu().findItem(R.id.drawer_allItems);
         MenuItem drawerFavorites = drawer.getMenu().findItem(R.id.drawer_favorites);
         MenuItem drawerMyLocation = drawer.getMenu().findItem(R.id.drawer_myLocation);
         MenuItem drawerSatellite = drawer.getMenu().findItem(R.id.drawer_satelliteToggle);
-        toolbar.setSubtitle("Amount of spots loaded: " + InOutOperations.spots.size());
-        TextView drawerSubtitle = drawer.getHeaderView(0).findViewById(R.id.drawer_subtitle);
+        MenuItem lofotenNavItem = drawer.getMenu().findItem(R.id.LofotenNavItem);
+        MenuItem icelandNavItem = drawer.getMenu().findItem(R.id.IcelandNavItem);
+        MenuItem scotlandNavItem = drawer.getMenu().findItem(R.id.ScotlandNavItem);
+        MenuItem currentBBoxNavItem = drawer.getMenu().findItem(R.id.currentBBox);
+        MaterialCardView cardview = findViewById(R.id.topCardView);
         drawerSubtitle.setText("Amount of spots loaded: " + InOutOperations.spots.size());
         drawerAllItems.setChecked(true);
-        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+        cardAppSearchText.setShowSoftInputOnFocus(true);
+
+        map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+            @Override
+            public void onCameraMove() {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) cardview.getLayoutParams();
+                params.setMargins(params.leftMargin, -300, params.rightMargin, params.bottomMargin); //substitute parameters for left, top, right, bottom
+                cardview.setLayoutParams(params);
+                //TODO this doesn't animate
+            }
+        });
+
+        map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+            @Override
+            public void onCameraIdle() {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) cardview.getLayoutParams();
+                params.setMargins(params.leftMargin, 50, params.rightMargin, params.bottomMargin); //substitute parameters for left, top, right, bottom
+                cardview.setLayoutParams(params);
+            }
+        });
+
+        cardAppLabel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cardAppLabel.setVisibility(View.GONE);
+                cardAppSearchText.setVisibility(View.VISIBLE);
+                cardAppSearchText.requestFocus();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.showSoftInput(cardAppSearchText, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+
+        cardSearchBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (cardAppSearchText.getVisibility() == View.VISIBLE) {
+                    if (!cardAppSearchText.getText().equals("")) {
+                        searcher.goToPlace(cardAppSearchText.getText().toString(), map);
+                        cardAppSearchText.clearFocus();
+                    } else {
+                        cardAppSearchText.setError("No query specified!");
+                    }
+                } else {
+                    cardAppLabel.setVisibility(View.GONE);
+                    cardAppSearchText.setVisibility(View.VISIBLE);
+                    cardAppSearchText.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.showSoftInput(cardAppSearchText, InputMethodManager.SHOW_IMPLICIT);
+
+                }
+            }
+        });
+
+        cardAppSearchText.setOnKeyListener(new View.OnKeyListener() {
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
+                        (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    if (!cardAppSearchText.getText().equals("")) {
+                        searcher.goToPlace(cardAppSearchText.getText().toString(), map);
+                        cardAppSearchText.clearFocus();
+
+                    } else {
+                        cardAppSearchText.setError("No query specified!");
+                    }
+                    return false;
+                }
+                return false;
+            }
+        });
+
+        cardNavIcon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 drawerLayout.open();
@@ -194,15 +277,73 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        drawerMyLocation.setChecked(map.isMyLocationEnabled());
+        drawerSatellite.setChecked(map.getMapType() == GoogleMap.MAP_TYPE_HYBRID);
+
+        drawerSatellite.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (map.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
+                    map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                    drawerSatellite.setChecked(true);
+                } else {
+                    map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    drawerSatellite.setChecked(false);
+                }
+                drawerLayout.close();
+                return false;
+            }
+        });
+
+        lofotenNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                LatLng latLng = new LatLng(68.36315324768857, 14.898834563791752);
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.5);
+                map.animateCamera(cameraUpdate);
+                drawerLayout.close();
+                return false;
+            }
+        });
+        scotlandNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                LatLng latLng = new LatLng(57.322641848476735, -4.313399456441402);
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.9);
+                map.animateCamera(cameraUpdate);
+                drawerLayout.close();
+                return false;
+            }
+        });
+        icelandNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                LatLng latLng = new LatLng(65.2742675631778, -19.45199064910412);
+                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 5.57);
+                map.animateCamera(cameraUpdate);
+                drawerLayout.close();
+                return false;
+            }
+        });
+        currentBBoxNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                LatLng toSave = map.getCameraPosition().target;
+                float zoom = map.getCameraPosition().zoom;
+                Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
+                drawerLayout.close();
+                return false;
+            }
+        });
         //Todo set actions for remaining navitems
     }
 
     private void setDisplayMode() {
-            for(Marker m : clusterManager.getMarkerCollection().getMarkers()) {
-                if(!m.getSnippet().contains(Constants.FAVE_STRING)) {
-                    m.setVisible(!favoritesOnly);
-                }
+        for (Marker m : clusterManager.getMarkerCollection().getMarkers()) {
+            if (!m.getSnippet().contains(Constants.FAVE_STRING)) {
+                m.setVisible(!favoritesOnly);
             }
+        }
         clusterManager.onCameraIdle();
     }
 
@@ -218,48 +359,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } catch (FlickrException e) {
                     Log.e(TAG, "handleFlickr: " + e, e);
                 }
-            }
-        });
-    }
-
-    private void handlePresets() {
-        MaterialButton lofotenFab = findViewById(R.id.lofotenFab);
-        lofotenFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng latLng = new LatLng(68.36315324768857, 14.898834563791752);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.5);
-                map.animateCamera(cameraUpdate);
-            }
-        });
-
-        MaterialButton scotlandFab = findViewById(R.id.scotlandFab);
-        scotlandFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng latLng = new LatLng(57.322641848476735, -4.313399456441402);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.9);
-                map.animateCamera(cameraUpdate);
-            }
-        });
-
-        MaterialButton icelandFab = findViewById(R.id.icelandFab);
-        icelandFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng latLng = new LatLng(65.2742675631778, -19.45199064910412);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 5.57);
-                map.animateCamera(cameraUpdate);
-            }
-        });
-
-        MaterialButton miscFab = findViewById(R.id.miscFab);
-        miscFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                LatLng toSave = map.getCameraPosition().target;
-                float zoom = map.getCameraPosition().zoom;
-                Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
             }
         });
     }
@@ -344,26 +443,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (Resources.NotFoundException e) {
             Log.e(TAG, "Can't find style. Error: ", e);
         }
-
-        FloatingActionButton satelliteFab = findViewById(R.id.satelliteFab);
-        satelliteFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (map.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
-                    map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                } else {
-                    map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                }
-            }
-        });
-        /*FloatingActionButton favoritesFab = findViewById(R.id.favoritesFab);
-        favoritesFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
-                startActivity(i);
-            }
-        });*/
     }
 
     private void setUpClusterer() {
@@ -392,7 +471,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 dialog.show();
 
                 MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-                if(url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
+                if (url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
                 openBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -429,7 +508,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         clusterManager.addItem(item);
                         favorites.add(item);
                         Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding "+item.getSnippet());
+                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
                         refreshFavorites();
                         saveFavorites();
                     }
@@ -490,7 +569,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 dialog.show();
 
                 MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-                if(url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
+                if (url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
                 openBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -527,7 +606,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         clusterManager.addItem(item);
                         favorites.add(item);
                         Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding "+item.getSnippet());
+                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
                         refreshFavorites();
                         saveFavorites();
                     }
@@ -545,7 +624,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private boolean favoritesContains(ClusterMarker item) {
-        for(ClusterMarker toCompare : favorites) {
+        for (ClusterMarker toCompare : favorites) {
             if (toCompare.getPosition().equals(item.getPosition())) return true;
         }
         return false;
@@ -565,7 +644,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Type type = new TypeToken<List<ClusterMarker>>() {
         }.getType();
 
-        Log.d(TAG, "loadFavorites: Loaded json: "+faves_json);
+        Log.d(TAG, "loadFavorites: Loaded json: " + faves_json);
 
         if (!faves_json.equals("")) favorites = gson.fromJson(faves_json, type);
 
@@ -584,7 +663,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         String json = gson.toJson(favorites);
 
-        Log.d(TAG, "Saving json: "+json);
+        Log.d(TAG, "Saving json: " + json);
 
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString(Constants.FAVS_PREF, json);
@@ -593,9 +672,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     void removeFromFavorites(ClusterMarker toRemove) {
         ArrayList<ClusterMarker> tempFavorites = favorites;
-        for(int i = 0; i < favorites.size(); i++) {
+        for (int i = 0; i < favorites.size(); i++) {
             ClusterMarker toCompare = favorites.get(i);
-            if(toCompare.getSnippet().equals(toRemove.getSnippet()))
+            if (toCompare.getSnippet().equals(toRemove.getSnippet()))
                 tempFavorites.remove(toRemove);
         }
         favorites = tempFavorites;
@@ -615,7 +694,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onResume() {
         super.onResume();
-        if(clusterManager != null) loadFavorites();
-        if(navBar != null) navBar.setSelectedItemId(R.id.homeNavItem);
+        if (clusterManager != null) loadFavorites();
+        if (navBar != null) navBar.setSelectedItemId(R.id.homeNavItem);
     }
 }

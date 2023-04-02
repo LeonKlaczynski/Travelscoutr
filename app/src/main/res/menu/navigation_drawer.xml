@@ -52,6 +52,11 @@
                 android:icon="@drawable/ic_baseline_star_24"
                 android:title="Iceland"
                 android:checkable="true" />
+            <item
+                android:id="@+id/currentBBox"
+                android:icon="@drawable/ic_baseline_bug_report_24"
+                android:title="Get current boundingbox"
+                android:checkable="true" />
         </menu>
     </item>
 </menu>
