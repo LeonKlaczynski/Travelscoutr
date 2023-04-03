@@ -1,6 +1,8 @@
 package com.klaczynski.travelscoutr;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
@@ -14,6 +16,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
@@ -25,7 +28,12 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.OvershootInterpolator;
+import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -35,6 +43,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentActivity;
 
@@ -95,6 +104,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     NavigationBarView navBar;
     NavigationView drawer;
     Menu navMenu;
+    MaterialCardView cardview;
+    ExtendedFloatingActionButton flickrBtn;
+
+    boolean controlsHidden = false;
+    boolean uiIsTransitioning = false;
+    private Marker lastClickedMarker;
+    private boolean isInfoWindowShown = false;
 
     Searcher searcher;
 
@@ -113,10 +129,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
+
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         //Clear Glide cache to confirm images will be up-to-date & avoid massive cache build-up.
         new Thread(new Runnable() {
@@ -178,29 +196,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MenuItem icelandNavItem = drawer.getMenu().findItem(R.id.IcelandNavItem);
         MenuItem scotlandNavItem = drawer.getMenu().findItem(R.id.ScotlandNavItem);
         MenuItem currentBBoxNavItem = drawer.getMenu().findItem(R.id.currentBBox);
-        MaterialCardView cardview = findViewById(R.id.topCardView);
+        cardview = findViewById(R.id.topCardView);
         drawerSubtitle.setText("Amount of spots loaded: " + InOutOperations.spots.size());
         drawerAllItems.setChecked(true);
         cardAppSearchText.setShowSoftInputOnFocus(true);
-
-        map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-            @Override
-            public void onCameraMove() {
-                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) cardview.getLayoutParams();
-                params.setMargins(params.leftMargin, -300, params.rightMargin, params.bottomMargin); //substitute parameters for left, top, right, bottom
-                cardview.setLayoutParams(params);
-                //TODO this doesn't animate
-            }
-        });
-
-        map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-            @Override
-            public void onCameraIdle() {
-                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) cardview.getLayoutParams();
-                params.setMargins(params.leftMargin, 50, params.rightMargin, params.bottomMargin); //substitute parameters for left, top, right, bottom
-                cardview.setLayoutParams(params);
-            }
-        });
 
         cardAppLabel.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -217,7 +216,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
                 if (cardAppSearchText.getVisibility() == View.VISIBLE) {
-                    if (!cardAppSearchText.getText().equals("")) {
+                    if (cardAppSearchText.getText().length() > 2) {
                         searcher.goToPlace(cardAppSearchText.getText().toString(), map);
                         cardAppSearchText.clearFocus();
                     } else {
@@ -236,8 +235,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         cardAppSearchText.setOnKeyListener(new View.OnKeyListener() {
             public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
-                        (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
                     if (!cardAppSearchText.getText().equals("")) {
                         searcher.goToPlace(cardAppSearchText.getText().toString(), map);
                         cardAppSearchText.clearFocus();
@@ -255,6 +253,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View v) {
                 drawerLayout.open();
+            }
+        });
+
+        map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(@NonNull LatLng latLng) {
+                if (controlsHidden && !uiIsTransitioning) {
+                    moveCardDown();
+                } else if(!uiIsTransitioning && !isInfoWindowShown) {
+                    moveCardUp();
+                }
             }
         });
 
@@ -349,7 +358,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void handleFlickr() {
         FlickrSearcher flickr = new FlickrSearcher(this);
-        ExtendedFloatingActionButton flickrBtn = findViewById(R.id.flickrFab);
+        flickrBtn = findViewById(R.id.flickrFab);
         flickrBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -386,8 +395,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (!map.isMyLocationEnabled())
             locationFab.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.R.attr.colorOutline));
         else if (lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null) {
-            LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(),
-                    lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
+            LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(), lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
             CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
             map.animateCamera(cameraUpdate);
         }
@@ -397,12 +405,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View view) {
                 if (map.isMyLocationEnabled()) {
-                    LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(),
-                            lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
+                    LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(), lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
                     map.animateCamera(cameraUpdate);
-                } else if (ContextCompat.checkSelfPermission(getApplicationContext(),
-                        Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                } else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                     map.setMyLocationEnabled(true);
                     locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
                 } else {
@@ -414,8 +420,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationFab.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-                if (!map.isMyLocationEnabled() && (ContextCompat.checkSelfPermission(getApplicationContext(),
-                        Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+                if (!map.isMyLocationEnabled() && (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
                     map.setMyLocationEnabled(true);
                     locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
                 } else {
@@ -450,8 +455,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         clusterManager.setAnimation(true);
         CustomClusterRenderer renderer = new CustomClusterRenderer(this, map, clusterManager);
         clusterManager.setRenderer(renderer);
-        clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<ClusterMarker>(
-                metrics.widthPixels, metrics.heightPixels));
+        clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<ClusterMarker>(metrics.widthPixels, metrics.heightPixels));
         clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this)));
         addItemsToClusterer();
         handleInteractions(clusterManager, map, renderer);
@@ -459,7 +463,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void handleInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomClusterRenderer renderer) {
-        map.setOnCameraIdleListener(clusterManager);
+        map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+            @Override
+            public void onCameraIdle() {
+                clusterManager.onCameraIdle();
+            }
+        });
+
         clusterManager.setOnClusterItemInfoWindowClickListener(new ClusterManager.OnClusterItemInfoWindowClickListener<ClusterMarker>() {
             @Override
             public void onClusterItemInfoWindowClick(ClusterMarker item) {
@@ -533,11 +543,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (marker.equals(currentShown)) {
                     marker.hideInfoWindow();
                     currentShown = null;
+                    lastClickedMarker = marker;
+                    isInfoWindowShown = true;
                 } else {
                     marker.showInfoWindow();
                     currentShown = marker;
                 }
                 return true;
+            }
+        });
+        map.setOnInfoWindowCloseListener(new GoogleMap.OnInfoWindowCloseListener() {
+            @Override
+            public void onInfoWindowClose(@NonNull Marker marker) {
+                lastClickedMarker = null;
+                isInfoWindowShown = false;
             }
         });
         clusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<ClusterMarker>() {
@@ -621,6 +640,65 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 });
             }
         });
+    }
+
+    private void moveCardDown() {
+        float moveDistance = 0f;
+        ObjectAnimator animation = ObjectAnimator.ofFloat(cardview, "translationY", moveDistance);
+        animation.setDuration(300);
+        animation.setInterpolator(new OvershootInterpolator());
+        animation.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animation) {
+                uiIsTransitioning = true;
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                controlsHidden = false;
+                uiIsTransitioning = false;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+        animation.start();
+        flickrBtn.show();
+    }
+
+    private void moveCardUp() {
+        float currentY = cardview.getY();
+        float moveDistance = -300f;
+        long animationDuration = 200;
+        TranslateAnimation animate = new TranslateAnimation(0, 0, 0, moveDistance);
+        animate.setInterpolator(new AccelerateDecelerateInterpolator());
+        animate.setDuration(animationDuration);
+        animate.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                uiIsTransitioning = true;
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                cardview.setY(currentY + moveDistance);
+                controlsHidden = true;
+                uiIsTransitioning = false;
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+        });
+        cardview.startAnimation(animate);
+        flickrBtn.hide();
     }
 
     private boolean favoritesContains(ClusterMarker item) {

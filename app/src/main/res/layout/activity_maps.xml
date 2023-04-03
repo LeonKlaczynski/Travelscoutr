@@ -16,8 +16,8 @@
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/topCardView"
             android:layout_width="match_parent"
-            android:layout_marginTop="50px"
-            android:layout_marginHorizontal="40px"
+            android:layout_marginTop="50dp"
+            android:layout_marginHorizontal="30dp"
             android:layout_height="50dp"
             map:cardElevation="5dp"
             map:cardBackgroundColor="?attr/colorSurface"
@@ -34,11 +34,11 @@
 
                 <ImageView
                     android:id="@+id/cardNavIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:layout_marginLeft="5dp"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_baseline_menu_24"
+                    android:src="@drawable/ic_baseline_menu_30"
                     android:tint="?attr/colorOnPrimaryContainer"
                     tools:ignore="UseAppTint"
                     map:layout_constraintStart_toStartOf="parent"
@@ -79,12 +79,12 @@
 
                 <ImageView
                     android:id="@+id/cardSearchIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:layout_marginRight="5dp"
                     android:gravity="right"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_outline_search_24"
+                    android:src="@drawable/ic_baseline_search_30"
                     map:layout_constraintEnd_toEndOf="parent"
                     map:layout_constraintTop_toTopOf="parent"
                     map:layout_constraintBottom_toBottomOf="parent"
