@@ -19,6 +19,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.StrictMode;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -94,7 +95,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public static String filesDir;
     public static final String TAG = "MapsActivity";
     public static Context context;
-    MaterialToolbar toolbar;
     LocationManager lm;
     int itemSize = 0;
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
@@ -107,9 +107,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     MaterialCardView cardview;
     ExtendedFloatingActionButton flickrBtn;
 
+    private Handler handler = new Handler();
+    private Runnable runnable;
+    boolean mapMoved = false;
+
     boolean controlsHidden = false;
     boolean uiIsTransitioning = false;
-    private Marker lastClickedMarker;
     private boolean isInfoWindowShown = false;
 
     Searcher searcher;
@@ -259,11 +262,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(@NonNull LatLng latLng) {
-                if (controlsHidden && !uiIsTransitioning) {
-                    moveCardDown();
-                } else if(!uiIsTransitioning && !isInfoWindowShown) {
-                    moveCardUp();
-                }
+                if (controlsHidden) moveCardDown();
+                else if(!isInfoWindowShown) moveCardUp();
             }
         });
 
@@ -467,72 +467,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onCameraIdle() {
                 clusterManager.onCameraIdle();
-            }
+                handler.removeCallbacks(runnable);
+
+                    runnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if(!controlsHidden) moveCardUp();
+                        }
+                    };
+                    handler.postDelayed(runnable, 3000);
+                }
         });
 
+        map.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
+            @Override
+            public void onCameraMoveStarted(int reason) {
+                mapMoved = true;
+                handler.removeCallbacks(runnable);
+                if(controlsHidden) moveCardDown();
+            }
+        });
         clusterManager.setOnClusterItemInfoWindowClickListener(new ClusterManager.OnClusterItemInfoWindowClickListener<ClusterMarker>() {
             @Override
             public void onClusterItemInfoWindowClick(ClusterMarker item) {
-                String url = item.getSnippet().split("!!!")[0];
-
-                Dialog dialog = new Dialog(MapsActivity.this);
-                dialog.setContentView(R.layout.actions_dialog);
-                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-                dialog.show();
-
-                MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-                if (url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
-                openBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                        Intent i = new Intent(Intent.ACTION_VIEW);
-                        i.setData(Uri.parse(url));
-                        startActivity(i);
-                    }
-                });
-
-                MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
-                directions.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                        intent.setPackage("com.google.android.apps.maps");
-                        startActivity(intent);
-                        dialog.dismiss();
-                    }
-                });
-
-                MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
-                favoriteBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                        if (favoritesContains(item)) {
-                            Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
-                        clusterManager.addItem(item);
-                        favorites.add(item);
-                        Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
-                        refreshFavorites();
-                        saveFavorites();
-                    }
-                });
-
-                MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
-                dismiss.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                    }
-                });
+                onSpotWindowClick(item);
             }
         });
+
         clusterManager.setOnClusterItemClickListener(new ClusterManager.OnClusterItemClickListener<ClusterMarker>() {
             Marker currentShown;
 
@@ -543,7 +504,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (marker.equals(currentShown)) {
                     marker.hideInfoWindow();
                     currentShown = null;
-                    lastClickedMarker = marker;
                     isInfoWindowShown = true;
                 } else {
                     marker.showInfoWindow();
@@ -555,7 +515,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnInfoWindowCloseListener(new GoogleMap.OnInfoWindowCloseListener() {
             @Override
             public void onInfoWindowClose(@NonNull Marker marker) {
-                lastClickedMarker = null;
                 isInfoWindowShown = false;
             }
         });
@@ -642,7 +601,74 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
+    private void onSpotWindowClick(ClusterMarker item) {
+        String url = item.getSnippet().split("!!!")[0];
+        boolean isFavorite = item.getSnippet().contains(Constants.FAVE_STRING);
+
+        Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.actions_dialog);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.show();
+
+        MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
+        if (url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
+        openBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(url));
+                context.startActivity(i);
+            }
+        });
+
+        MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
+        directions.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                intent.setPackage("com.google.android.apps.maps");
+                context.startActivity(intent);
+                dialog.dismiss();
+            }
+        });
+
+        MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
+        if(isFavorite) {
+            favoriteBtn.setEnabled(false);
+            favoriteBtn.setText("Already added to favourites");
+        }
+        favoriteBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                if (favoritesContains(item)) {
+                    Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
+                clusterManager.addItem(item);
+                favorites.add(item);
+                Toast.makeText(context, "Added to favorites!", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
+                refreshFavorites();
+                saveFavorites();
+            }
+        });
+
+        MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
+        dismiss.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+    }
+
     private void moveCardDown() {
+        if(uiIsTransitioning) return;
         float moveDistance = 0f;
         ObjectAnimator animation = ObjectAnimator.ofFloat(cardview, "translationY", moveDistance);
         animation.setDuration(300);
@@ -674,6 +700,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void moveCardUp() {
+        if(uiIsTransitioning) return;
         float currentY = cardview.getY();
         float moveDistance = -300f;
         long animationDuration = 200;
@@ -708,7 +735,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return false;
     }
 
-    void refreshFavorites() {
+    public void refreshFavorites() {
         clusterManager.cluster();
     }
 

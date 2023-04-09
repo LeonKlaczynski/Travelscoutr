@@ -22,7 +22,8 @@
             map:cardElevation="5dp"
             map:cardBackgroundColor="?attr/colorSurface"
             map:cardCornerRadius="40dp"
-            map:strokeWidth="0dp"
+            map:strokeWidth="1dp"
+            map:strokeColor="?attr/colorOutline"
             map:layout_constraintTop_toTopOf="parent">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -101,7 +102,8 @@
             android:layout_height="0dp"
             map:layout_constraintBottom_toBottomOf="@+id/navigationRailView"
             map:layout_constraintTop_toTopOf="parent"
-            android:background="?attr/colorSecondaryContainer" />
+            android:background="?attr/colorSecondaryContainer"
+            tools:layout="@android:layout/activity_list_item"/>
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/locationFab"
@@ -111,7 +113,8 @@
             android:clickable="true"
             android:src="@drawable/ic_baseline_my_location_24"
             map:layout_constraintBottom_toTopOf="@+id/flickrFab"
-            map:layout_constraintEnd_toEndOf="@+id/map" />
+            map:layout_constraintEnd_toEndOf="@+id/map"
+            tools:ignore="SpeakableTextPresentCheck" />
 
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/flickrFab"
