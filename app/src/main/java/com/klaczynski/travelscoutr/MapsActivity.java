@@ -14,12 +14,13 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.os.StrictMode;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -29,13 +30,13 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.OvershootInterpolator;
 import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -58,11 +59,11 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.gson.Gson;
@@ -95,10 +96,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public static String filesDir;
     public static final String TAG = "MapsActivity";
     public static Context context;
+
     LocationManager lm;
+    PowerManager powerManager;
+
     int itemSize = 0;
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
-    boolean favoritesOnly = true;
 
     DrawerLayout drawerLayout;
     NavigationBarView navBar;
@@ -106,16 +109,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Menu navMenu;
     MaterialCardView cardview;
     ExtendedFloatingActionButton flickrBtn;
+    FloatingActionButton locationFab;
 
-    private Handler handler = new Handler();
+    private final Handler handler = new Handler();
     private Runnable runnable;
     boolean mapMoved = false;
 
     boolean controlsHidden = false;
     boolean uiIsTransitioning = false;
     private boolean isInfoWindowShown = false;
+   private boolean isFollowingLocation = false;
 
     Searcher searcher;
+
+    boolean keepScreenAwake = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,6 +131,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Logger.log(TAG, filesDir);
         context = this;
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
         searcher = new Searcher(this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
@@ -154,11 +162,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Setting up the googleMap ui options & map style (day/night, if applicable)
         setupMapUiAndStyle();
 
-        //Location fab & enable my location if possible
-        setupLocationAndPermissions();
-
         //Sets actions to do with Flickr (initializing the search tool, assigns button action)
-        handleFlickr();
+        setupFlickr();
 
         //Yes, doing this on the main thread. Loving that. Maybe a TODO..
         try {
@@ -176,9 +181,86 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //
         loadFavorites();
 
-        setDisplayMode();
-
         setupNavigationAndUX();
+
+        //Loads preferences (currently whether or not to keep the screen awake & my location settings and accompanying permissions)
+        loadPreferences();
+    }
+
+    @SuppressLint("MissingPermission")
+    private void loadPreferences() {
+        locationFab = findViewById(R.id.locationFab);
+
+        SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
+
+        keepScreenAwake = preferences.getBoolean(Constants.WAKELOCK_PREF, false);
+        drawerLayout.setKeepScreenOn(keepScreenAwake);
+        ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setChecked(keepScreenAwake);
+        ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putBoolean(Constants.WAKELOCK_PREF, isChecked);
+                editor.apply();
+
+                keepScreenAwake = isChecked;
+                drawerLayout.setKeepScreenOn(keepScreenAwake);
+            }
+        });
+
+        //Check the preferences to enable/disable my location
+
+        if(preferences.getBoolean(Constants.LOCATION_ENABLED_PREF, false)) {
+            //if yes, check permissions
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1312);
+            } else {
+                //Permissions are granted, enable my location
+                map.setMyLocationEnabled(true);
+            }
+        } else map.setMyLocationEnabled(false);
+
+        ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setChecked(map.isMyLocationEnabled());
+        ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putBoolean(Constants.LOCATION_ENABLED_PREF, isChecked);
+                editor.apply();
+
+                if(isChecked) {
+                    if (ContextCompat.checkSelfPermission(MapsActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(MapsActivity.this, "Location permissions are not granted!", Toast.LENGTH_SHORT).show();
+                        ActivityCompat.requestPermissions(MapsActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                                Constants.LOCATION_PERMS_CODE);
+                        buttonView.setChecked(false);
+                    } else {
+                        map.setMyLocationEnabled(true);
+                        locationFab.setVisibility(View.VISIBLE);
+                    }
+                } else {
+                    map.setMyLocationEnabled(false);
+                    locationFab.setVisibility(View.INVISIBLE);
+                }
+            }
+        });
+
+        //Upon startup, go to location if enabled. If not, get rid of fab.
+        if(!map.isMyLocationEnabled()) locationFab.setVisibility(View.INVISIBLE);
+        else {
+            goToMyLocation();
+            locationFab.setVisibility(View.VISIBLE);
+        }
+
+        locationFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setFollowMyLocation(!isFollowingLocation);
+            }
+        });
+
+
+
     }
 
     private void setupNavigationAndUX() {
@@ -262,6 +344,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(@NonNull LatLng latLng) {
+                setFollowMyLocation(false);
                 if (controlsHidden) moveCardDown();
                 else if(!isInfoWindowShown) moveCardUp();
             }
@@ -287,20 +370,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
         drawerMyLocation.setChecked(map.isMyLocationEnabled());
-        drawerSatellite.setChecked(map.getMapType() == GoogleMap.MAP_TYPE_HYBRID);
 
-        drawerSatellite.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+        MaterialSwitch satelliteSwitch = (MaterialSwitch) drawerSatellite.getActionView();
+        satelliteSwitch.setChecked(map.getMapType() == GoogleMap.MAP_TYPE_HYBRID);
+
+        satelliteSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public boolean onMenuItemClick(MenuItem item) {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (map.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
                     map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                    drawerSatellite.setChecked(true);
+                    satelliteSwitch.setChecked(true);
                 } else {
                     map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                    drawerSatellite.setChecked(false);
+                    satelliteSwitch.setChecked(false);
                 }
                 drawerLayout.close();
-                return false;
             }
         });
 
@@ -347,16 +431,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Todo set actions for remaining navitems
     }
 
-    private void setDisplayMode() {
-        for (Marker m : clusterManager.getMarkerCollection().getMarkers()) {
-            if (!m.getSnippet().contains(Constants.FAVE_STRING)) {
-                m.setVisible(!favoritesOnly);
-            }
-        }
-        clusterManager.onCameraIdle();
-    }
 
-    private void handleFlickr() {
+    private void setupFlickr() {
         FlickrSearcher flickr = new FlickrSearcher(this);
         flickrBtn = findViewById(R.id.flickrFab);
         flickrBtn.setOnClickListener(new View.OnClickListener() {
@@ -372,65 +448,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    @SuppressLint("MissingPermission")
-    private void setupLocationAndPermissions() {
-        FloatingActionButton locationFab = findViewById(R.id.locationFab);
+    private void goToMyLocation() {
+        map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+            @Override
+            public void onMyLocationChange(@NonNull Location location) {
+                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                setFollowMyLocation(false);
+            }
+        });
+    }
+
+    private void setFollowMyLocation(boolean shouldFollow) {
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true);
         int colorOff = ContextCompat.getColor(this, typedValue.resourceId);
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
         int colorOn = ContextCompat.getColor(this, typedValue.resourceId);
 
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            map.setMyLocationEnabled(true);
+        if(shouldFollow) {
+            isFollowingLocation = true;
+            LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
+            map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+                @Override
+                public void onMyLocationChange(@NonNull Location location) {
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                }
+            });
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            isFollowingLocation = false;
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOff));
-
+            map.setOnMyLocationChangeListener(null);
         }
-
-        //If location disabled, color fab gray
-        if (!map.isMyLocationEnabled())
-            locationFab.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.R.attr.colorOutline));
-        else if (lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null) {
-            LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(), lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
-            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
-            map.animateCamera(cameraUpdate);
-        }
-
-        //We want to move the camera to my location when fab is clicked. If disabled, enable when initially pressed
-        locationFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (map.isMyLocationEnabled()) {
-                    LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(), lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
-                    CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
-                    map.animateCamera(cameraUpdate);
-                } else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    map.setMyLocationEnabled(true);
-                    locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
-                } else {
-                    Toast.makeText(MapsActivity.this, "Not able to get location. Are permissions granted?", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-        locationFab.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                if (!map.isMyLocationEnabled() && (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
-                    map.setMyLocationEnabled(true);
-                    locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
-                } else {
-                    map.setMyLocationEnabled(false);
-                    locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOff));
-                }
-                return true;
-            }
-        });
-
     }
 
     private void setupMapUiAndStyle() {
@@ -482,15 +534,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
             @Override
             public void onCameraMoveStarted(int reason) {
-                mapMoved = true;
-                handler.removeCallbacks(runnable);
-                if(controlsHidden) moveCardDown();
+                if(reason == GoogleMap.OnCameraMoveStartedListener.REASON_API_ANIMATION ||
+                        reason == GoogleMap.OnCameraMoveStartedListener.REASON_DEVELOPER_ANIMATION) return;
+                else {
+                    mapMoved = true;
+                    handler.removeCallbacks(runnable);
+                    if (controlsHidden) moveCardDown();
+                    setFollowMyLocation(false);
+                }
             }
         });
+
         clusterManager.setOnClusterItemInfoWindowClickListener(new ClusterManager.OnClusterItemInfoWindowClickListener<ClusterMarker>() {
             @Override
             public void onClusterItemInfoWindowClick(ClusterMarker item) {
                 onSpotWindowClick(item);
+                setFollowMyLocation(false);
             }
         });
 
@@ -499,6 +558,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public boolean onClusterItemClick(ClusterMarker item) {
+                setFollowMyLocation(false);
                 Marker marker = renderer.getMarker(item);
                 Log.d(TAG, "Marker clicked: " + marker.getTitle());
                 if (marker.equals(currentShown)) {
@@ -515,12 +575,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnInfoWindowCloseListener(new GoogleMap.OnInfoWindowCloseListener() {
             @Override
             public void onInfoWindowClose(@NonNull Marker marker) {
+                setFollowMyLocation(false);
                 isInfoWindowShown = false;
             }
         });
         clusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<ClusterMarker>() {
             @Override
             public boolean onClusterClick(Cluster<ClusterMarker> cluster) {
+                setFollowMyLocation(false);
                 CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(cluster.getPosition(), map.getCameraPosition().zoom + 2);
                 map.animateCamera(cameraUpdate);
                 return true;
@@ -529,6 +591,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(@NonNull LatLng latLng) {
+                setFollowMyLocation(false);
                 Intent i = new Intent(MapsActivity.this, StreetViewActivity.class);
                 i.putExtra("lat", (float) latLng.latitude);
                 i.putExtra("lng", (float) latLng.longitude);
@@ -668,7 +731,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void moveCardDown() {
-        if(uiIsTransitioning) return;
+
+        if(uiIsTransitioning || drawerLayout.isOpen()) return;
         float moveDistance = 0f;
         ObjectAnimator animation = ObjectAnimator.ofFloat(cardview, "translationY", moveDistance);
         animation.setDuration(300);
@@ -700,7 +764,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void moveCardUp() {
-        if(uiIsTransitioning) return;
+        if(uiIsTransitioning || drawerLayout.isOpen()) return;
         float currentY = cardview.getY();
         float moveDistance = -300f;
         long animationDuration = 200;
@@ -801,5 +865,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onResume();
         if (clusterManager != null) loadFavorites();
         if (navBar != null) navBar.setSelectedItemId(R.id.homeNavItem);
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch(requestCode) {
+            case Constants.LOCATION_PERMS_CODE:
+                SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
+                SharedPreferences.Editor editor = preferences.edit();
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    locationFab.setVisibility(View.VISIBLE);
+                    map.setMyLocationEnabled(true);
+
+                    editor.putBoolean(Constants.LOCATION_ENABLED_PREF, true);
+                    editor.apply();
+                } else {
+                    Toast.makeText(context, "Permission was denied!", Toast.LENGTH_SHORT).show();
+                    locationFab.setVisibility(View.INVISIBLE);
+                    map.setMyLocationEnabled(false);
+
+                    editor.putBoolean(Constants.LOCATION_ENABLED_PREF, false);
+                    editor.apply();
+                }
+                ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setChecked(map.isMyLocationEnabled());
+                break;
+        }
     }
 }

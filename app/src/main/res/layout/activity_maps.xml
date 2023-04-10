@@ -6,7 +6,8 @@
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MapsActivity">
+    tools:context=".MapsActivity"
+    android:keepScreenOn="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -23,7 +24,7 @@
             map:cardBackgroundColor="?attr/colorSurface"
             map:cardCornerRadius="40dp"
             map:strokeWidth="1dp"
-            map:strokeColor="?attr/colorOutline"
+            map:strokeColor="?attr/colorSurface"
             map:layout_constraintTop_toTopOf="parent">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -129,6 +130,7 @@
             android:backgroundTint="?attr/colorFlickrContainer"
             map:layout_constraintBottom_toTopOf="@+id/navigationRailView"
             map:layout_constraintEnd_toEndOf="@+id/map" />
+
 
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
