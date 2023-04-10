@@ -35,8 +35,8 @@ public class InOutOperations {
 
         InputStream in;
         try {
-            Logger.log(TAG, "Downloading JSON from: "+ Constants.URL);
-            in = new URL(Constants.URL).openStream();
+            Logger.log(TAG, "Downloading JSON from: "+ Constants.LOCATIONSCOUT_DATA_URL);
+            in = new URL(Constants.LOCATIONSCOUT_DATA_URL).openStream();
             DataInputStream dis = new DataInputStream(in);
             byte[] buffer = new byte[1024];
             int length;
