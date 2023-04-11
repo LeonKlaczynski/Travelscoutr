@@ -21,12 +21,12 @@ import org.json.JSONObject;
 
 import java.net.URLEncoder;
 
-public class Searcher {
+public class PlacesSearcher {
 
     RequestQueue queue;
     public static final String TAG = "Searcher";
 
-    public Searcher(Context context) {
+    public PlacesSearcher(Context context) {
         queue = Volley.newRequestQueue(context);
     }
 
@@ -43,6 +43,7 @@ public class Searcher {
                         @Override
                         public void onResponse(String response) {
                             try {
+
                                 JSONObject resultJson = new JSONObject(response);
                                 JSONArray searchResultList = resultJson.getJSONArray("results");
                                 JSONObject position = searchResultList.getJSONObject(0).getJSONObject("position");
@@ -50,7 +51,7 @@ public class Searcher {
                                 lng[0] = position.getDouble("lon");
                                 Log.d(TAG, "onResponse: latlong: "+lat[0]+" "+lng[0]);
 
-                                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(lat[0], lng[0]), (float) 10.0);
+                                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(new LatLng(lat[0], lng[0]), (float) 14.0);
                                 map.animateCamera(cameraUpdate);
                             } catch (JSONException e) {
                                 e.printStackTrace();

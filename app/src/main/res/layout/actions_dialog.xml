@@ -27,25 +27,33 @@
             android:id="@+id/buttonShow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Show on locationscout.com" />
+            android:text="Show on locationscout.com"
+            android:drawableLeft="@drawable/ic_baseline_open_in_browser_15"
+            android:drawableTint="?attr/colorOnPrimary"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonDirections"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Directions to spot" />
+            android:text="Directions to spot"
+            android:drawableLeft="@drawable/ic_baseline_directions_15"
+            android:drawableTint="?attr/colorOnPrimary"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonAddFavorite"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Add to favourites" />
+            android:text="Add to favourites"
+            android:drawableLeft="@drawable/ic_baseline_favorite_15"
+            android:drawableTint="?attr/colorOnPrimary"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonCancel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cancel" />
+            android:text="Cancel"
+            android:drawableLeft="@drawable/ic_baseline_cancel_15"
+            android:drawableTint="?attr/colorOnPrimary"/>
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

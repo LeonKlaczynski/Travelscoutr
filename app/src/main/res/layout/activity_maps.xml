@@ -52,11 +52,10 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginHorizontal="10dp"
-                    android:gravity="center_vertical"
+                    android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/app_name"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                    android:textColor="?attr/colorOnSecondaryContainer"
                     map:layout_constraintBottom_toBottomOf="parent"
                     map:layout_constraintEnd_toStartOf="@+id/cardSearchIcon"
                     map:layout_constraintStart_toEndOf="@+id/cardNavIcon" />
@@ -67,7 +66,7 @@
                     android:layout_height="match_parent"
                     android:layout_marginHorizontal="10dp"
                     android:background="@null"
-                    android:gravity="center_vertical"
+                    android:gravity="center"
                     android:hint="Search.."
                     android:inputType="text"
                     android:maxLines="1"
@@ -75,7 +74,7 @@
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                     android:textColor="?attr/colorOnSurface"
                     map:layout_constraintBottom_toBottomOf="parent"
-                    map:layout_constraintEnd_toEndOf="@+id/cardAppLabel"
+                    map:layout_constraintEnd_toStartOf="@+id/cardSearchIcon"
                     map:layout_constraintStart_toEndOf="@+id/cardNavIcon"
                     android:visibility="gone"/>
 

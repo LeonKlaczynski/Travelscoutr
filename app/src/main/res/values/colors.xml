@@ -68,5 +68,8 @@
     <color name="md_theme_dark_surfaceTint">#9DD67D</color>
     <color name="md_theme_dark_surfaceTintColor">#9DD67D</color>
 
+    <color name="flickr_red">#B85858</color>
+    <color name="flickr_blue">#589DB8</color>
+
     <color name="appBarCols">#FAE9EE</color>
 </resources>

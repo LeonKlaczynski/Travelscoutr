@@ -1,6 +1,5 @@
 package com.klaczynski.travelscoutr;
 
-import android.Manifest;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
@@ -20,7 +19,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.PowerManager;
 import android.os.StrictMode;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -73,12 +71,13 @@ import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
 import com.klaczynski.travelscoutr.databinding.ActivityMapsBinding;
 import com.klaczynski.travelscoutr.io.InOutOperations;
-import com.klaczynski.travelscoutr.io.Searcher;
+import com.klaczynski.travelscoutr.io.PlacesSearcher;
 import com.klaczynski.travelscoutr.net.FlickrSearcher;
 import com.klaczynski.travelscoutr.obj.ClusterMarker;
 import com.klaczynski.travelscoutr.obj.Spot;
 import com.klaczynski.travelscoutr.ui.CustomClusterRenderer;
 import com.klaczynski.travelscoutr.ui.CustomInfoWindowAdapter;
+import com.klaczynski.travelscoutr.ui.NoClusterRenderer;
 
 import org.json.JSONException;
 
@@ -98,7 +97,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public static Context context;
 
     LocationManager lm;
-    PowerManager powerManager;
 
     int itemSize = 0;
     ArrayList<ClusterMarker> favorites = new ArrayList<>();
@@ -113,14 +111,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private final Handler handler = new Handler();
     private Runnable runnable;
-    boolean mapMoved = false;
+    boolean mapIsMoving = false;
 
     boolean controlsHidden = false;
     boolean uiIsTransitioning = false;
     private boolean isInfoWindowShown = false;
-   private boolean isFollowingLocation = false;
+    private boolean isFollowingLocation = false;
 
-    Searcher searcher;
+    PlacesSearcher placesSearcher;
 
     boolean keepScreenAwake = false;
 
@@ -132,7 +130,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         context = this;
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-        searcher = new Searcher(this);
+        placesSearcher = new PlacesSearcher(this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -302,8 +300,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 if (cardAppSearchText.getVisibility() == View.VISIBLE) {
                     if (cardAppSearchText.getText().length() > 2) {
-                        searcher.goToPlace(cardAppSearchText.getText().toString(), map);
-                        cardAppSearchText.clearFocus();
+                        placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
+                        cardview.clearFocus();
+                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.hideSoftInputFromWindow(cardview.getWindowToken(), 0);
                     } else {
                         cardAppSearchText.setError("No query specified!");
                     }
@@ -322,9 +322,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public boolean onKey(View v, int keyCode, KeyEvent event) {
                 if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
                     if (!cardAppSearchText.getText().equals("")) {
-                        searcher.goToPlace(cardAppSearchText.getText().toString(), map);
-                        cardAppSearchText.clearFocus();
-
+                        placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
+                        cardview.clearFocus();
+                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.hideSoftInputFromWindow(cardview.getWindowToken(), 0);
                     } else {
                         cardAppSearchText.setError("No query specified!");
                     }
@@ -474,8 +475,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
                 @Override
                 public void onMyLocationChange(@NonNull Location location) {
-                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                    if(!mapIsMoving) {
+                        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                    }
                 }
             });
         } else {
@@ -510,16 +513,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<ClusterMarker>(metrics.widthPixels, metrics.heightPixels));
         clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this)));
         addItemsToClusterer();
-        handleInteractions(clusterManager, map, renderer);
+        handleMapInteractions(clusterManager, map, renderer);
 
     }
 
-    private void handleInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomClusterRenderer renderer) {
+    private void handleMapInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomClusterRenderer renderer) {
         map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
             @Override
             public void onCameraIdle() {
+                if(map.getCameraPosition().zoom > 18) {
+                    if(clusterManager.getRenderer() instanceof CustomClusterRenderer)
+                        clusterManager.setRenderer(new NoClusterRenderer(MapsActivity.this, map, clusterManager));
+                } else {
+                    if(clusterManager.getRenderer() instanceof  NoClusterRenderer)
+                        clusterManager.setRenderer(new CustomClusterRenderer(MapsActivity.this, map, clusterManager));
+                }
                 clusterManager.onCameraIdle();
                 handler.removeCallbacks(runnable);
+                mapIsMoving = false;
 
                     runnable = new Runnable() {
                         @Override
@@ -534,10 +545,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
             @Override
             public void onCameraMoveStarted(int reason) {
+                mapIsMoving = true;
+
                 if(reason == GoogleMap.OnCameraMoveStartedListener.REASON_API_ANIMATION ||
                         reason == GoogleMap.OnCameraMoveStartedListener.REASON_DEVELOPER_ANIMATION) return;
                 else {
-                    mapMoved = true;
                     handler.removeCallbacks(runnable);
                     if (controlsHidden) moveCardDown();
                     setFollowMyLocation(false);
@@ -764,7 +776,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void moveCardUp() {
-        if(uiIsTransitioning || drawerLayout.isOpen()) return;
+        if(uiIsTransitioning || drawerLayout.isOpen() || cardview.hasFocus()) return;
         float currentY = cardview.getY();
         float moveDistance = -300f;
         long animationDuration = 200;
