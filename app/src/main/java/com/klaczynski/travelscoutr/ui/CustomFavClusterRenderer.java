@@ -73,11 +73,7 @@ public class CustomFavClusterRenderer extends DefaultClusterRenderer<ClusterMark
 
     @Override
     protected boolean shouldRenderAsCluster(@NonNull Cluster<ClusterMarker> cluster) {
-        if (shouldCluster) {
-            return cluster.getSize() > MIN_CLUSTER_SIZE;
-        } else {
-            return shouldCluster;
-        }
+        return false;
     }
 
     @Override

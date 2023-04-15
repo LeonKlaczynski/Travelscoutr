@@ -38,6 +38,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -52,6 +53,7 @@ import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm
 import com.klaczynski.travelscoutr.obj.ClusterMarker;
 import com.klaczynski.travelscoutr.ui.CustomFavClusterRenderer;
 import com.klaczynski.travelscoutr.ui.CustomInfoWindowAdapter;
+import com.klaczynski.travelscoutr.ui.NoClusterRenderer;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -104,6 +106,22 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         loadFavorites();
 
         setMenuOptions();
+
+        goToCenterOfFavorites();
+    }
+
+    private void goToCenterOfFavorites() {
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+
+        for (ClusterMarker marker : favorites) {
+            builder.include(marker.getPosition());
+        }
+
+        LatLngBounds bounds = builder.build();
+        int padding = 150;
+
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+        map.animateCamera(cu);
     }
 
     private void setMenuOptions() {
@@ -143,18 +161,13 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         } else {
             ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOff));
+            locationFab.setVisibility(View.GONE);
 
         }
 
         //If location disabled, color fab gray
         if (!map.isMyLocationEnabled())
             locationFab.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.R.attr.colorOutline));
-        else if (lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null) {
-            LatLng latLng = new LatLng(lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLatitude(),
-                    lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getLongitude());
-            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 10);
-            map.animateCamera(cameraUpdate);
-        }
 
         //We want to move the camera to my location when fab is clicked. If disabled, enable when initially pressed
         locationFab.setOnClickListener(new View.OnClickListener() {

@@ -89,39 +89,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap map;
     private ClusterManager<ClusterMarker> clusterManager;
-    private DisplayMetrics metrics = new DisplayMetrics();
+    private final DisplayMetrics metrics = new DisplayMetrics();
 
     private ActivityMapsBinding binding;
     public static String filesDir;
     public static final String TAG = "MapsActivity";
     public static Context context;
 
-    LocationManager lm;
+    private LocationManager lm;
 
-    int itemSize = 0;
-    ArrayList<ClusterMarker> favorites = new ArrayList<>();
+    private int itemSize = 0;
+    private ArrayList<ClusterMarker> favorites = new ArrayList<>();
 
-    DrawerLayout drawerLayout;
-    NavigationBarView navBar;
-    NavigationView drawer;
-    Menu navMenu;
-    MaterialCardView cardview;
-    ExtendedFloatingActionButton flickrBtn;
-    FloatingActionButton locationFab;
+    private DrawerLayout drawerLayout;
+    private NavigationBarView navBar;
+    private NavigationView drawer;
+    private Menu navMenu;
+    private MaterialCardView cardview;
+
+    private ExtendedFloatingActionButton flickrBtn;
+    private FloatingActionButton locationFab;
 
     private final Handler handler = new Handler();
     private Runnable runnable;
-    boolean mapIsMoving = false;
+    private boolean mapIsMoving = false;
 
-    boolean controlsHidden = false;
-    boolean uiIsTransitioning = false;
+    private boolean controlsHidden = false;
+    private boolean uiIsTransitioning = false;
     private boolean isInfoWindowShown = false;
     private boolean isFollowingLocation = false;
+    private boolean keepScreenAwake = false;
+
 
     PlacesSearcher placesSearcher;
-
-    boolean keepScreenAwake = false;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -469,15 +469,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if(shouldFollow) {
             isFollowingLocation = true;
-            LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+            if(map.getMyLocation() != null) {
+                LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+            }
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
             map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
                 @Override
                 public void onMyLocationChange(@NonNull Location location) {
                     if(!mapIsMoving) {
                         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                        //if speed higher that 4m/s, zoom in a little less. We assume the user is moving in a car.
+                        if(location.hasSpeed())
+                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, (location.getSpeed() > 4) ? 12 : 14));
+                        else
+                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
                     }
                 }
             });
@@ -521,13 +527,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
             @Override
             public void onCameraIdle() {
-                if(map.getCameraPosition().zoom > 18) {
+                /*if(map.getCameraPosition().zoom > 18) {
                     if(clusterManager.getRenderer() instanceof CustomClusterRenderer)
                         clusterManager.setRenderer(new NoClusterRenderer(MapsActivity.this, map, clusterManager));
                 } else {
                     if(clusterManager.getRenderer() instanceof  NoClusterRenderer)
                         clusterManager.setRenderer(new CustomClusterRenderer(MapsActivity.this, map, clusterManager));
-                }
+                }*/
                 clusterManager.onCameraIdle();
                 handler.removeCallbacks(runnable);
                 mapIsMoving = false;

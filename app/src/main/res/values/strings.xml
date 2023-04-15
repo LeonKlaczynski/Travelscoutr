@@ -44,4 +44,9 @@
         libero vel nunc consequat, quis tincidunt nisl eleifend. Cras bibendum enim a justo luctus
         vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
     </string>
+    <string name="menu_button">Menu button</string>
+    <string name="search">Search..</string>
+    <string name="search_button">Search button</string>
+    <string name="my_location_button">My location button</string>
+    <string name="flickr_search">Flickr search</string>
 </resources>
