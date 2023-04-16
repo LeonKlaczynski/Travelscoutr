@@ -466,12 +466,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         int colorOff = ContextCompat.getColor(this, typedValue.resourceId);
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
         int colorOn = ContextCompat.getColor(this, typedValue.resourceId);
+        float zoomLevel = (map.getCameraPosition().zoom > 14) ? map.getCameraPosition().zoom : 14;
 
         if(shouldFollow) {
             isFollowingLocation = true;
             if(map.getMyLocation() != null) {
                 LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
             }
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
             map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
@@ -481,7 +482,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                         //if speed higher that 4m/s, zoom in a little less. We assume the user is moving in a car.
                         if(location.hasSpeed())
-                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, (location.getSpeed() > 4) ? 12 : 14));
+                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, (location.getSpeed() > 4) ? 12 : zoomLevel));
                         else
                             map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
                     }
