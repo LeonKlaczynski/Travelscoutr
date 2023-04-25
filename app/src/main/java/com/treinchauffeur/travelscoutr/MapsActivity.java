@@ -26,7 +26,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -57,13 +56,12 @@ import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
 import com.treinchauffeur.travelscoutr.databinding.ActivityMapsBinding;
 import com.treinchauffeur.travelscoutr.io.InOutOperator;
-import com.treinchauffeur.travelscoutr.net.PlacesSearcher;
 import com.treinchauffeur.travelscoutr.net.FlickrSearcher;
+import com.treinchauffeur.travelscoutr.net.PlacesSearcher;
 import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
 import com.treinchauffeur.travelscoutr.obj.Spot;
 import com.treinchauffeur.travelscoutr.ui.CustomClusterRenderer;
@@ -86,17 +84,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @SuppressLint("StaticFieldLeak")
     public static Context context;
-    private LocationManager lm;
-    private int itemSize = 0;
+    protected LocationManager lm;
+    protected int itemSize = 0;
     private ArrayList<ClusterMarker> favorites = new ArrayList<>();
 
     public DrawerLayout drawerLayout;
     private NavigationBarView navBar;
     private NavigationView drawer;
-    private Menu navMenu;
+    protected Menu navMenu;
     private MaterialCardView cardView;
 
-    private ExtendedFloatingActionButton flickrBtn;
+    protected ExtendedFloatingActionButton flickrBtn;
     private FloatingActionButton locationFab;
     private boolean isFollowingLocation = false;
     private boolean keepScreenAwake = false;
@@ -184,16 +182,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         keepScreenAwake = preferences.getBoolean(Constants.WAKELOCK_PREF, false);
         drawerLayout.setKeepScreenOn(keepScreenAwake);
         ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setChecked(keepScreenAwake);
-        ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putBoolean(Constants.WAKELOCK_PREF, isChecked);
-                editor.apply();
+        ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean(Constants.WAKELOCK_PREF, isChecked);
+            editor.apply();
 
-                keepScreenAwake = isChecked;
-                drawerLayout.setKeepScreenOn(keepScreenAwake);
-            }
+            keepScreenAwake = isChecked;
+            drawerLayout.setKeepScreenOn(keepScreenAwake);
         });
 
         //Check the preferences to enable/disable my location
@@ -209,27 +204,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else map.setMyLocationEnabled(false);
 
         ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setChecked(map.isMyLocationEnabled());
-        ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putBoolean(Constants.LOCATION_ENABLED_PREF, isChecked);
-                editor.apply();
+        ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean(Constants.LOCATION_ENABLED_PREF, isChecked);
+            editor.apply();
 
-                if (isChecked) {
-                    if (ContextCompat.checkSelfPermission(MapsActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        Toast.makeText(MapsActivity.this, "Location permissions are not granted!", Toast.LENGTH_SHORT).show();
-                        ActivityCompat.requestPermissions(MapsActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                                Constants.LOCATION_PERMS_CODE);
-                        buttonView.setChecked(false);
-                    } else {
-                        map.setMyLocationEnabled(true);
-                        locationFab.setVisibility(View.VISIBLE);
-                    }
+            if (isChecked) {
+                if (ContextCompat.checkSelfPermission(MapsActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(MapsActivity.this, "Location permissions are not granted!", Toast.LENGTH_SHORT).show();
+                    ActivityCompat.requestPermissions(MapsActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                            Constants.LOCATION_PERMS_CODE);
+                    buttonView.setChecked(false);
                 } else {
-                    map.setMyLocationEnabled(false);
-                    locationFab.setVisibility(View.INVISIBLE);
+                    map.setMyLocationEnabled(true);
+                    locationFab.setVisibility(View.VISIBLE);
                 }
+            } else {
+                map.setMyLocationEnabled(false);
+                locationFab.setVisibility(View.INVISIBLE);
             }
         });
 
@@ -266,37 +258,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         drawerAllItems.setChecked(true);
         cardAppSearchText.setShowSoftInputOnFocus(true);
 
-        cardAppLabel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        cardAppLabel.setOnClickListener(v -> {
+            cardAppLabel.setVisibility(View.GONE);
+            cardAppSearchText.setVisibility(View.VISIBLE);
+            cardAppSearchText.requestFocus();
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.showSoftInput(cardAppSearchText, InputMethodManager.SHOW_IMPLICIT);
+        });
+
+        cardSearchBtn.setOnClickListener(v -> {
+            if (cardAppSearchText.getVisibility() == View.VISIBLE) {
+                if (cardAppSearchText.getText().length() > 2) {
+                    placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
+                    cardView.clearFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(cardView.getWindowToken(), 0);
+                } else {
+                    cardAppSearchText.setError("No query specified!");
+                }
+            } else {
                 cardAppLabel.setVisibility(View.GONE);
                 cardAppSearchText.setVisibility(View.VISIBLE);
                 cardAppSearchText.requestFocus();
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.showSoftInput(cardAppSearchText, InputMethodManager.SHOW_IMPLICIT);
-            }
-        });
 
-        cardSearchBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (cardAppSearchText.getVisibility() == View.VISIBLE) {
-                    if (cardAppSearchText.getText().length() > 2) {
-                        placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
-                        cardView.clearFocus();
-                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.hideSoftInputFromWindow(cardView.getWindowToken(), 0);
-                    } else {
-                        cardAppSearchText.setError("No query specified!");
-                    }
-                } else {
-                    cardAppLabel.setVisibility(View.GONE);
-                    cardAppSearchText.setVisibility(View.VISIBLE);
-                    cardAppSearchText.requestFocus();
-                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.showSoftInput(cardAppSearchText, InputMethodManager.SHOW_IMPLICIT);
-
-                }
             }
         });
 
@@ -372,15 +358,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             drawerLayout.close();
             return false;
         });
-        currentBBoxNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                LatLng toSave = map.getCameraPosition().target;
-                float zoom = map.getCameraPosition().zoom;
-                Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
-                drawerLayout.close();
-                return false;
-            }
+        currentBBoxNavItem.setOnMenuItemClickListener(item -> {
+            LatLng toSave = map.getCameraPosition().target;
+            float zoom = map.getCameraPosition().zoom;
+            Log.d(TAG, "LatLng + Zoom: " + toSave + zoom);
+            drawerLayout.close();
+            return false;
         });
     }
 
@@ -388,9 +371,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void setupFlickr() {
         FlickrSearcher flickr = new FlickrSearcher(MapsActivity.this, this);
         flickrBtn = findViewById(R.id.flickrFab);
-        flickrBtn.setOnClickListener(view -> runOnUiThread(() -> {
-                flickr.performSearch(clusterManager, map.getProjection().getVisibleRegion().latLngBounds);
-        }));
+        flickrBtn.setOnClickListener(view -> runOnUiThread(() -> flickr.performSearch(clusterManager, map.getProjection().getVisibleRegion().latLngBounds)));
     }
 
     private void goToMyLocation() {
@@ -456,7 +437,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         clusterManager.setAnimation(true);
         CustomClusterRenderer renderer = new CustomClusterRenderer(this, map, clusterManager);
         clusterManager.setRenderer(renderer);
-        clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<ClusterMarker>(metrics.widthPixels, metrics.heightPixels));
+        clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<>(metrics.widthPixels, metrics.heightPixels));
         clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this)));
         addItemsToClusterer();
         handleMapInteractions(clusterManager, map, renderer);
@@ -494,83 +475,71 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return true;
             }
         });
-        map.setOnInfoWindowCloseListener(new GoogleMap.OnInfoWindowCloseListener() {
-            @Override
-            public void onInfoWindowClose(@NonNull Marker marker) {
-                setFollowMyLocation(false);
-                uiHandler.isInfoWindowShown = false;
-            }
+        map.setOnInfoWindowCloseListener(marker -> {
+            setFollowMyLocation(false);
+            uiHandler.isInfoWindowShown = false;
         });
-        clusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<ClusterMarker>() {
-            @Override
-            public boolean onClusterClick(Cluster<ClusterMarker> cluster) {
-                setFollowMyLocation(false);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(cluster.getPosition(), map.getCameraPosition().zoom + 2);
-                map.animateCamera(cameraUpdate);
-                return true;
-            }
+        clusterManager.setOnClusterClickListener(cluster -> {
+            setFollowMyLocation(false);
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(cluster.getPosition(), map.getCameraPosition().zoom + 2);
+            map.animateCamera(cameraUpdate);
+            return true;
         });
-        map.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
-            @Override
-            public void onMapLongClick(@NonNull LatLng latLng) {
-                setFollowMyLocation(false);
-                Intent i = new Intent(MapsActivity.this, StreetViewActivity.class);
-                i.putExtra("lat", (float) latLng.latitude);
-                i.putExtra("lng", (float) latLng.longitude);
-                startActivity(i);
-            }
+        map.setOnMapLongClickListener(latLng -> {
+            setFollowMyLocation(false);
+            Intent i = new Intent(MapsActivity.this, StreetViewActivity.class);
+            i.putExtra("lat", (float) latLng.latitude);
+            i.putExtra("lng", (float) latLng.longitude);
+            startActivity(i);
         });
 
         //favoriting stuff
-        clusterManager.setOnClusterItemInfoWindowLongClickListener(new ClusterManager.OnClusterItemInfoWindowLongClickListener<ClusterMarker>() {
-            @Override
-            public void onClusterItemInfoWindowLongClick(ClusterMarker item) {
-                assert item.getSnippet() != null;
-                String url = item.getSnippet().split("!!!")[0];
+        clusterManager.setOnClusterItemInfoWindowLongClickListener(item -> {
+            assert item.getSnippet() != null;
+            String url = item.getSnippet().split("!!!")[0];
 
-                Dialog dialog = new Dialog(MapsActivity.this);
-                dialog.setContentView(R.layout.actions_dialog);
-                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-                dialog.show();
+            Dialog dialog = new Dialog(MapsActivity.this);
+            dialog.setContentView(R.layout.actions_dialog);
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.show();
 
-                MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-                if (url.contains("flickr.com")) openBtn.setText(R.string.show_on_flickr_com);
-                openBtn.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    Intent i = new Intent(Intent.ACTION_VIEW);
-                    i.setData(Uri.parse(url));
-                    startActivity(i);
-                });
+            MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
+            if (url.contains("flickr.com")) openBtn.setText(R.string.show_on_flickr_com);
+            openBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(url));
+                startActivity(i);
+            });
 
-                MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
-                directions.setOnClickListener(v -> {
-                    String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                    intent.setPackage("com.google.android.apps.maps");
-                    startActivity(intent);
-                    dialog.dismiss();
-                });
+            MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
+            directions.setOnClickListener(v -> {
+                String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                intent.setPackage("com.google.android.apps.maps");
+                startActivity(intent);
+                dialog.dismiss();
+            });
 
-                MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
-                favoriteBtn.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    if (favoritesContains(item)) {
-                        Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+            MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
+            favoriteBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (favoritesContains(item)) {
+                    Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-                    item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
-                    clusterManager.addItem(item);
-                    favorites.add(item);
-                    Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
-                    refreshFavorites();
-                    saveFavorites();
-                });
+                item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
+                clusterManager.addItem(item);
+                favorites.add(item);
+                Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
+                refreshFavorites();
+                saveFavorites();
+            });
 
-                MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
-                dismiss.setOnClickListener(v -> dialog.dismiss());
-            }
+            MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
+            dismiss.setOnClickListener(v -> dialog.dismiss());
         });
     }
 

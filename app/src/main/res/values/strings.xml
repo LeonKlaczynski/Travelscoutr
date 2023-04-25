@@ -52,4 +52,6 @@
     <string name="already_added_to_favourites">Already added to favourites</string>
     <string name="show_on_flickr_com">Show on flickr.com</string>
     <string name="amount_of_spots_loaded">"Amount of spots loaded: "</string>
+    <string name="remove_from_favourites">Remove from favourites</string>
+    <string name="show_on_flickr">Show on flickr</string>
 </resources>

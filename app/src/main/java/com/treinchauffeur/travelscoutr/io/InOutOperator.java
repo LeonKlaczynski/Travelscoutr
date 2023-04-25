@@ -24,13 +24,14 @@ import org.json.JSONObject;
 public class InOutOperator {
 
     /**
-     * @author Leonk Attempts to download locationscout.net's JSON file & converts it to GeoJSON.
+     * @author Leonk
+     * Attempts to download locationscout.net's JSON file & converts it to GeoJSON.
      */
     static String TAG = "InOutOperations";
     public ArrayList<Spot> spots = new ArrayList<Spot>();
 
     private MapsActivity activity;
-    private ViewGroup rootView;
+    protected ViewGroup rootView;
     UserInterfaceHandler uiHandler;
 
     public InOutOperator(MapsActivity activity) {
@@ -40,7 +41,7 @@ public class InOutOperator {
 
     /**
      *
-     *
+     * @throws JSONException
      */
     public void startConversion() throws JSONException {
         uiHandler.setIsLoading(true);
@@ -52,7 +53,7 @@ public class InOutOperator {
             byte[] buffer = new byte[1024];
             int length;
             String filename = "mapdata.json";
-            FileOutputStream fos = MapsActivity.context.openFileOutput(filename, Context.MODE_PRIVATE);
+            FileOutputStream fos = activity.openFileOutput(filename, Context.MODE_PRIVATE);
             while ((length = dis.read(buffer)) > 0) {
                 fos.write(buffer, 0, length);
             }
@@ -63,7 +64,7 @@ public class InOutOperator {
 
         JSONArray array = null;
         try {
-            array = new JSONArray(Reader.jsonData("mapdata.json"));
+            array = new JSONArray(FileReader.jsonData("mapdata.json"));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }

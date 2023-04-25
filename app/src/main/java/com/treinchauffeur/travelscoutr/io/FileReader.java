@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-public class Reader {
+public class FileReader {
 
     public static String jsonData(String inputFile) throws FileNotFoundException {
         FileInputStream fis = MapsActivity.context.openFileInput("mapdata.json");
