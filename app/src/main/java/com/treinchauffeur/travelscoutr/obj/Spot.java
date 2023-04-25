@@ -1,7 +1,7 @@
-package com.klaczynski.travelscoutr.obj;
+package com.treinchauffeur.travelscoutr.obj;
 
 import com.google.android.gms.maps.model.Marker;
-import com.klaczynski.travelscoutr.Constants;
+import com.treinchauffeur.travelscoutr.Constants;
 
 public class Spot {
 

@@ -1,11 +1,9 @@
-package com.klaczynski.travelscoutr;
+package com.treinchauffeur.travelscoutr;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -50,10 +48,9 @@ import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
-import com.klaczynski.travelscoutr.obj.ClusterMarker;
-import com.klaczynski.travelscoutr.ui.CustomFavClusterRenderer;
-import com.klaczynski.travelscoutr.ui.CustomInfoWindowAdapter;
-import com.klaczynski.travelscoutr.ui.NoClusterRenderer;
+import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
+import com.treinchauffeur.travelscoutr.ui.CustomFavClusterRenderer;
+import com.treinchauffeur.travelscoutr.ui.CustomInfoWindowAdapter;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -113,15 +110,23 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
     private void goToCenterOfFavorites() {
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
 
-        for (ClusterMarker marker : favorites) {
-            builder.include(marker.getPosition());
+        if(favorites.size() > 0) {
+            for (ClusterMarker marker : favorites) {
+                builder.include(marker.getPosition());
+            }
+
+            LatLngBounds bounds = builder.build();
+            int padding = 150;
+
+            CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+            map.animateCamera(cu);
+        } else if(map.isMyLocationEnabled()) {
+            float zoomLevel = (map.getCameraPosition().zoom > 14) ? map.getCameraPosition().zoom : 14;
+            if(map.getMyLocation() != null) {
+                LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
+            }
         }
-
-        LatLngBounds bounds = builder.build();
-        int padding = 150;
-
-        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
-        map.animateCamera(cu);
     }
 
     private void setMenuOptions() {

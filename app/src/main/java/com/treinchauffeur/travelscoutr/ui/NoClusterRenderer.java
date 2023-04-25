@@ -1,4 +1,4 @@
-package com.klaczynski.travelscoutr.ui;
+package com.treinchauffeur.travelscoutr.ui;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -15,21 +15,20 @@ import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
-import com.klaczynski.travelscoutr.Constants;
-import com.klaczynski.travelscoutr.R;
-import com.klaczynski.travelscoutr.obj.ClusterMarker;
+import com.treinchauffeur.travelscoutr.Constants;
+import com.treinchauffeur.travelscoutr.R;
+import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
 
 
-public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker> implements GoogleMap.OnCameraIdleListener {
+public class NoClusterRenderer extends DefaultClusterRenderer<ClusterMarker> implements GoogleMap.OnCameraIdleListener {
     Context context;
     IconGenerator iconGen;
-    private boolean shouldCluster = true;
     private static final int MIN_CLUSTER_SIZE = 5;
     GoogleMap map;
     ClusterManager manager;
 
 
-    public CustomClusterRenderer(Context context, GoogleMap map, ClusterManager<ClusterMarker> clusterManager) {
+    public NoClusterRenderer(Context context, GoogleMap map, ClusterManager<ClusterMarker> clusterManager) {
         super(context, map, clusterManager);
         this.context = context;
         this.manager = clusterManager;
@@ -80,11 +79,7 @@ public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker>
 
     @Override
     protected boolean shouldRenderAsCluster(@NonNull Cluster<ClusterMarker> cluster) {
-        if (shouldCluster) {
-            return cluster.getSize() > MIN_CLUSTER_SIZE;
-        } else {
-            return shouldCluster;
-        }
+        return false;
     }
 
     @Override

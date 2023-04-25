@@ -1,4 +1,4 @@
-package com.klaczynski.travelscoutr.ui;
+package com.treinchauffeur.travelscoutr.ui;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -15,12 +15,12 @@ import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
-import com.klaczynski.travelscoutr.Constants;
-import com.klaczynski.travelscoutr.R;
-import com.klaczynski.travelscoutr.obj.ClusterMarker;
+import com.treinchauffeur.travelscoutr.Constants;
+import com.treinchauffeur.travelscoutr.R;
+import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
 
 
-public class CustomFavClusterRenderer extends DefaultClusterRenderer<ClusterMarker> implements GoogleMap.OnCameraIdleListener {
+public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker> implements GoogleMap.OnCameraIdleListener {
     Context context;
     IconGenerator iconGen;
     private boolean shouldCluster = true;
@@ -29,7 +29,7 @@ public class CustomFavClusterRenderer extends DefaultClusterRenderer<ClusterMark
     ClusterManager manager;
 
 
-    public CustomFavClusterRenderer(Context context, GoogleMap map, ClusterManager<ClusterMarker> clusterManager) {
+    public CustomClusterRenderer(Context context, GoogleMap map, ClusterManager<ClusterMarker> clusterManager) {
         super(context, map, clusterManager);
         this.context = context;
         this.manager = clusterManager;
@@ -50,17 +50,24 @@ public class CustomFavClusterRenderer extends DefaultClusterRenderer<ClusterMark
     @Override
     protected void onBeforeClusterItemRendered(@NonNull ClusterMarker item, @NonNull MarkerOptions markerOptions) {
         super.onBeforeClusterItemRendered(item, markerOptions);
-            iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker_fav));
+
+        if(item.getSnippet().contains(Constants.FLICKR_STRING)) {
+            iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.map_marker_flickr));
             final Bitmap icon = iconGen.makeIcon();
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
             markerOptions.alpha((float)0.8);
+        } else {
+            iconGen.setBackground(ContextCompat.getDrawable(context, R.drawable.ic_marker));
+            final Bitmap icon = iconGen.makeIcon();
+            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(icon));
+            markerOptions.alpha((float)0.8);
+        }
     }
 
     @Override
     protected void onBeforeClusterRendered(@NonNull Cluster<ClusterMarker> cluster, @NonNull MarkerOptions markerOptions) {
         super.onBeforeClusterRendered(cluster, markerOptions);
         markerOptions.alpha((float)0.4);
-
     }
 
     @Override
@@ -73,9 +80,14 @@ public class CustomFavClusterRenderer extends DefaultClusterRenderer<ClusterMark
 
     @Override
     protected boolean shouldRenderAsCluster(@NonNull Cluster<ClusterMarker> cluster) {
-        return false;
+        if (shouldCluster) {
+            return cluster.getSize() > MIN_CLUSTER_SIZE;
+        } else {
+            return shouldCluster;
+        }
     }
 
     @Override
-    public void onCameraIdle() {}
+    public void onCameraIdle() {
+    }
 }

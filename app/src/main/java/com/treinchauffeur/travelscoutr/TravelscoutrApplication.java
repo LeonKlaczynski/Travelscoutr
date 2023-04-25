@@ -1,4 +1,4 @@
-package com.klaczynski.travelscoutr;
+package com.treinchauffeur.travelscoutr;
 
 import android.app.Application;
 

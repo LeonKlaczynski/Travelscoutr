@@ -1,4 +1,4 @@
-package com.klaczynski.travelscoutr.obj;
+package com.treinchauffeur.travelscoutr.obj;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.clustering.ClusterItem;

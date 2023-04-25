@@ -1,10 +1,12 @@
-package com.klaczynski.travelscoutr.io;
+package com.treinchauffeur.travelscoutr.io;
 
 import android.content.Context;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
-import com.klaczynski.travelscoutr.*;
-import com.klaczynski.travelscoutr.obj.Spot;
+import com.treinchauffeur.travelscoutr.*;
+import com.treinchauffeur.travelscoutr.obj.Spot;
+import com.treinchauffeur.travelscoutr.ui.UserInterfaceHandler;
 
 import java.io.DataInputStream;
 import java.io.FileNotFoundException;
@@ -19,20 +21,29 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class InOutOperations {
+public class InOutOperator {
 
     /**
      * @author Leonk Attempts to download locationscout.net's JSON file & converts it to GeoJSON.
      */
     static String TAG = "InOutOperations";
-    public static ArrayList<Spot> spots = new ArrayList<Spot>();
+    public ArrayList<Spot> spots = new ArrayList<Spot>();
+
+    private MapsActivity activity;
+    private ViewGroup rootView;
+    UserInterfaceHandler uiHandler;
+
+    public InOutOperator(MapsActivity activity) {
+        this.activity = activity;
+        uiHandler = new UserInterfaceHandler(activity);
+    }
 
     /**
      *
      *
      */
-    public static void startConversion() throws JSONException {
-
+    public void startConversion() throws JSONException {
+        uiHandler.setIsLoading(true);
         InputStream in;
         try {
             Logger.log(TAG, "Downloading JSON from: "+ Constants.LOCATIONSCOUT_DATA_URL);
@@ -76,13 +87,14 @@ public class InOutOperations {
                 spots.add(spot);
 
         }
+        uiHandler.setIsLoading(false);
         Logger.log(TAG, "Successfully loaded " + spots.size() + " objects!");
         //convert(); We don't care about geoJSON for now
     }
 
-    private static void convert() throws JSONException {
+    private void convert() throws JSONException {
         if (spots.size() == 0) {
-            Logger.log(TAG, "ERROR, array size is 0");
+            Logger.log(TAG, "ERROR, array size is 0?");
             return;
         }
         JSONObject geoJSON = new JSONObject();

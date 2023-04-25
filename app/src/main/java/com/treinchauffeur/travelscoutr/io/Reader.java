@@ -1,6 +1,6 @@
-package com.klaczynski.travelscoutr.io;
+package com.treinchauffeur.travelscoutr.io;
 
-import com.klaczynski.travelscoutr.MapsActivity;
+import com.treinchauffeur.travelscoutr.MapsActivity;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;

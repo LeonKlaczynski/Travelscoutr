@@ -1,4 +1,4 @@
-package com.klaczynski.travelscoutr.ui;
+package com.treinchauffeur.travelscoutr.ui;
 
 import android.graphics.drawable.Drawable;
 import android.util.Log;
@@ -20,8 +20,8 @@ import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Marker;
-import com.klaczynski.travelscoutr.Constants;
-import com.klaczynski.travelscoutr.R;
+import com.treinchauffeur.travelscoutr.Constants;
+import com.treinchauffeur.travelscoutr.R;
 
 public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 

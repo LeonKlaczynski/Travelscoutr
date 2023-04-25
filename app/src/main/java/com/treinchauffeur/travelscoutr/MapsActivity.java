@@ -1,7 +1,5 @@
-package com.klaczynski.travelscoutr;
+package com.treinchauffeur.travelscoutr;
 
-import android.animation.Animator;
-import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
@@ -13,12 +11,10 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.StrictMode;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -29,10 +25,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.Animation;
-import android.view.animation.OvershootInterpolator;
-import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -48,7 +40,6 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentActivity;
 
 import com.bumptech.glide.Glide;
-import com.flickr4java.flickr.FlickrException;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -69,15 +60,15 @@ import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm;
-import com.klaczynski.travelscoutr.databinding.ActivityMapsBinding;
-import com.klaczynski.travelscoutr.io.InOutOperations;
-import com.klaczynski.travelscoutr.io.PlacesSearcher;
-import com.klaczynski.travelscoutr.net.FlickrSearcher;
-import com.klaczynski.travelscoutr.obj.ClusterMarker;
-import com.klaczynski.travelscoutr.obj.Spot;
-import com.klaczynski.travelscoutr.ui.CustomClusterRenderer;
-import com.klaczynski.travelscoutr.ui.CustomInfoWindowAdapter;
-import com.klaczynski.travelscoutr.ui.NoClusterRenderer;
+import com.treinchauffeur.travelscoutr.databinding.ActivityMapsBinding;
+import com.treinchauffeur.travelscoutr.io.InOutOperator;
+import com.treinchauffeur.travelscoutr.net.PlacesSearcher;
+import com.treinchauffeur.travelscoutr.net.FlickrSearcher;
+import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
+import com.treinchauffeur.travelscoutr.obj.Spot;
+import com.treinchauffeur.travelscoutr.ui.CustomClusterRenderer;
+import com.treinchauffeur.travelscoutr.ui.CustomInfoWindowAdapter;
+import com.treinchauffeur.travelscoutr.ui.UserInterfaceHandler;
 
 import org.json.JSONException;
 
@@ -90,55 +81,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap map;
     private ClusterManager<ClusterMarker> clusterManager;
     private final DisplayMetrics metrics = new DisplayMetrics();
-
-    private ActivityMapsBinding binding;
     public static String filesDir;
     public static final String TAG = "MapsActivity";
+
+    @SuppressLint("StaticFieldLeak")
     public static Context context;
-
     private LocationManager lm;
-
     private int itemSize = 0;
     private ArrayList<ClusterMarker> favorites = new ArrayList<>();
 
-    private DrawerLayout drawerLayout;
+    public DrawerLayout drawerLayout;
     private NavigationBarView navBar;
     private NavigationView drawer;
     private Menu navMenu;
-    private MaterialCardView cardview;
+    private MaterialCardView cardView;
 
     private ExtendedFloatingActionButton flickrBtn;
     private FloatingActionButton locationFab;
-
-    private final Handler handler = new Handler();
-    private Runnable runnable;
-    private boolean mapIsMoving = false;
-
-    private boolean controlsHidden = false;
-    private boolean uiIsTransitioning = false;
-    private boolean isInfoWindowShown = false;
     private boolean isFollowingLocation = false;
     private boolean keepScreenAwake = false;
 
 
-    PlacesSearcher placesSearcher;
+    private PlacesSearcher placesSearcher;
+    private InOutOperator inOutOperator;
+    private UserInterfaceHandler uiHandler;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        com.treinchauffeur.travelscoutr.databinding.ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        drawerLayout = findViewById(R.id.rootView);
+        uiHandler = new UserInterfaceHandler(this);
+        inOutOperator = new InOutOperator(this);
         filesDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
         Logger.log(TAG, filesDir);
         context = this;
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-        placesSearcher = new PlacesSearcher(this);
+        placesSearcher = new PlacesSearcher(MapsActivity.this, this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
 
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        assert mapFragment != null;
         mapFragment.getMapAsync(this);
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
 
@@ -146,16 +134,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         //Clear Glide cache to confirm images will be up-to-date & avoid massive cache build-up.
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Glide.get(context).clearDiskCache();
-            }
-        }).start();
+        new Thread(() -> Glide.get(context).clearDiskCache()).start();
     }
 
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(@NonNull GoogleMap googleMap) {
         map = googleMap;
         //Setting up the googleMap ui options & map style (day/night, if applicable)
         setupMapUiAndStyle();
@@ -163,27 +146,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //Sets actions to do with Flickr (initializing the search tool, assigns button action)
         setupFlickr();
 
-        //Yes, doing this on the main thread. Loving that. Maybe a TODO..
-        try {
-            InOutOperations.startConversion();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        @SuppressLint("SetTextI18n") Thread thread = new Thread(() -> {
+            try {
+                inOutOperator.startConversion();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
-        if (InOutOperations.spots.size() == 0) {
-            Toast.makeText(context, "No spots were loaded. Network issues?", Toast.LENGTH_SHORT).show();
-        } else {
-            setUpClusterer();
-        }
+            if (inOutOperator.spots.size() == 0) {
+                Toast.makeText(context, "No spots were loaded. Network issues?", Toast.LENGTH_SHORT).show();
+            } else {
+                setUpClusterer();
+            }
+            //Loading favorites from sharedpreferences
+            loadFavorites();
 
-        //
-        loadFavorites();
+            runOnUiThread(() -> {
+                TextView drawerSubtitle = drawer.getHeaderView(0).findViewById(R.id.drawer_subtitle);
+                drawerSubtitle.setText(getString(R.string.amount_of_spots_loaded) + inOutOperator.spots.size());
+            });
+        });
+        thread.start();
 
         setupNavigationAndUX();
 
         //Loads preferences (currently whether or not to keep the screen awake & my location settings and accompanying permissions)
         loadPreferences();
     }
+
 
     @SuppressLint("MissingPermission")
     private void loadPreferences() {
@@ -208,7 +198,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //Check the preferences to enable/disable my location
 
-        if(preferences.getBoolean(Constants.LOCATION_ENABLED_PREF, false)) {
+        if (preferences.getBoolean(Constants.LOCATION_ENABLED_PREF, false)) {
             //if yes, check permissions
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1312);
@@ -226,7 +216,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 editor.putBoolean(Constants.LOCATION_ENABLED_PREF, isChecked);
                 editor.apply();
 
-                if(isChecked) {
+                if (isChecked) {
                     if (ContextCompat.checkSelfPermission(MapsActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(MapsActivity.this, "Location permissions are not granted!", Toast.LENGTH_SHORT).show();
                         ActivityCompat.requestPermissions(MapsActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
@@ -244,32 +234,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
         //Upon startup, go to location if enabled. If not, get rid of fab.
-        if(!map.isMyLocationEnabled()) locationFab.setVisibility(View.INVISIBLE);
+        if (!map.isMyLocationEnabled()) locationFab.setVisibility(View.INVISIBLE);
         else {
             goToMyLocation();
             locationFab.setVisibility(View.VISIBLE);
         }
 
-        locationFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setFollowMyLocation(!isFollowingLocation);
-            }
-        });
-
+        locationFab.setOnClickListener(v -> setFollowMyLocation(!isFollowingLocation));
 
 
     }
 
+    @SuppressLint("SetTextI18n")
     private void setupNavigationAndUX() {
         navBar = findViewById(R.id.navigationRailView);
         navMenu = navBar.getMenu();
-        drawerLayout = findViewById(R.id.drawerLayout);
         drawer = findViewById(R.id.navigationView);
         ImageView cardSearchBtn = findViewById(R.id.cardSearchIcon);
         ImageView cardNavIcon = findViewById(R.id.cardNavIcon);
         TextView cardAppLabel = findViewById(R.id.cardAppLabel);
-        TextView drawerSubtitle = drawer.getHeaderView(0).findViewById(R.id.drawer_subtitle);
         EditText cardAppSearchText = findViewById(R.id.cardAppSearchText);
         MenuItem drawerAllItems = drawer.getMenu().findItem(R.id.drawer_allItems);
         MenuItem drawerFavorites = drawer.getMenu().findItem(R.id.drawer_favorites);
@@ -279,8 +262,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MenuItem icelandNavItem = drawer.getMenu().findItem(R.id.IcelandNavItem);
         MenuItem scotlandNavItem = drawer.getMenu().findItem(R.id.ScotlandNavItem);
         MenuItem currentBBoxNavItem = drawer.getMenu().findItem(R.id.currentBBox);
-        cardview = findViewById(R.id.topCardView);
-        drawerSubtitle.setText("Amount of spots loaded: " + InOutOperations.spots.size());
+        cardView = findViewById(R.id.topCardView);
         drawerAllItems.setChecked(true);
         cardAppSearchText.setShowSoftInputOnFocus(true);
 
@@ -301,9 +283,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (cardAppSearchText.getVisibility() == View.VISIBLE) {
                     if (cardAppSearchText.getText().length() > 2) {
                         placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
-                        cardview.clearFocus();
-                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.hideSoftInputFromWindow(cardview.getWindowToken(), 0);
+                        cardView.clearFocus();
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.hideSoftInputFromWindow(cardView.getWindowToken(), 0);
                     } else {
                         cardAppSearchText.setError("No query specified!");
                     }
@@ -318,56 +300,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        cardAppSearchText.setOnKeyListener(new View.OnKeyListener() {
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
-                    if (!cardAppSearchText.getText().equals("")) {
-                        placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
-                        cardview.clearFocus();
-                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.hideSoftInputFromWindow(cardview.getWindowToken(), 0);
-                    } else {
-                        cardAppSearchText.setError("No query specified!");
-                    }
-                    return false;
+        cardAppSearchText.setOnKeyListener((v, keyCode, event) -> {
+            if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                if (!cardAppSearchText.getText().toString().equals("")) {
+                    placesSearcher.goToPlace(cardAppSearchText.getText().toString(), map);
+                    cardView.clearFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(cardView.getWindowToken(), 0);
+                } else {
+                    cardAppSearchText.setError("No query specified!");
                 }
                 return false;
             }
+            return false;
         });
 
-        cardNavIcon.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                drawerLayout.open();
-            }
+        cardNavIcon.setOnClickListener(v -> drawerLayout.open());
+
+        map.setOnMapClickListener(latLng -> {
+            setFollowMyLocation(false);
+            uiHandler.onMapClick();
         });
 
-        map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(@NonNull LatLng latLng) {
-                setFollowMyLocation(false);
-                if (controlsHidden) moveCardDown();
-                else if(!isInfoWindowShown) moveCardUp();
-            }
+        navMenu.findItem(R.id.favoritesNavItem).setOnMenuItemClickListener(item -> {
+            Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
+            startActivity(i);
+            return false;
         });
 
-        navMenu.findItem(R.id.favoritesNavItem).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
-                startActivity(i);
-                return false;
-            }
-        });
-
-        drawerFavorites.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                drawerLayout.close();
-                Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
-                startActivity(i);
-                return false;
-            }
+        drawerFavorites.setOnMenuItemClickListener(item -> {
+            drawerLayout.close();
+            Intent i = new Intent(MapsActivity.this, FavoritesActivity.class);
+            startActivity(i);
+            return false;
         });
 
         drawerMyLocation.setChecked(map.isMyLocationEnabled());
@@ -375,49 +340,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         MaterialSwitch satelliteSwitch = (MaterialSwitch) drawerSatellite.getActionView();
         satelliteSwitch.setChecked(map.getMapType() == GoogleMap.MAP_TYPE_HYBRID);
 
-        satelliteSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (map.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
-                    map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                    satelliteSwitch.setChecked(true);
-                } else {
-                    map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                    satelliteSwitch.setChecked(false);
-                }
-                drawerLayout.close();
+        satelliteSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (map.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
+                map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                satelliteSwitch.setChecked(true);
+            } else {
+                map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                satelliteSwitch.setChecked(false);
             }
+            drawerLayout.close();
         });
 
-        lofotenNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                LatLng latLng = new LatLng(68.36315324768857, 14.898834563791752);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.5);
-                map.animateCamera(cameraUpdate);
-                drawerLayout.close();
-                return false;
-            }
+        lofotenNavItem.setOnMenuItemClickListener(item -> {
+            LatLng latLng = new LatLng(68.36315324768857, 14.898834563791752);
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.5);
+            map.animateCamera(cameraUpdate);
+            drawerLayout.close();
+            return false;
         });
-        scotlandNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                LatLng latLng = new LatLng(57.322641848476735, -4.313399456441402);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.9);
-                map.animateCamera(cameraUpdate);
-                drawerLayout.close();
-                return false;
-            }
+        scotlandNavItem.setOnMenuItemClickListener(item -> {
+            LatLng latLng = new LatLng(57.322641848476735, -4.313399456441402);
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 6.9);
+            map.animateCamera(cameraUpdate);
+            drawerLayout.close();
+            return false;
         });
-        icelandNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                LatLng latLng = new LatLng(65.2742675631778, -19.45199064910412);
-                CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 5.57);
-                map.animateCamera(cameraUpdate);
-                drawerLayout.close();
-                return false;
-            }
+        icelandNavItem.setOnMenuItemClickListener(item -> {
+            LatLng latLng = new LatLng(65.2742675631778, -19.45199064910412);
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, (float) 5.57);
+            map.animateCamera(cameraUpdate);
+            drawerLayout.close();
+            return false;
         });
         currentBBoxNavItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
@@ -429,38 +382,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return false;
             }
         });
-        //Todo set actions for remaining navitems
     }
 
 
     private void setupFlickr() {
-        FlickrSearcher flickr = new FlickrSearcher(this);
+        FlickrSearcher flickr = new FlickrSearcher(MapsActivity.this, this);
         flickrBtn = findViewById(R.id.flickrFab);
-        flickrBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(MapsActivity.this, "Searching flickr..", Toast.LENGTH_SHORT).show();
-                try {
-                    flickr.performSearch(map, clusterManager);
-                } catch (FlickrException e) {
-                    Log.e(TAG, "handleFlickr: " + e, e);
-                }
-            }
-        });
+        flickrBtn.setOnClickListener(view -> runOnUiThread(() -> {
+                flickr.performSearch(clusterManager, map.getProjection().getVisibleRegion().latLngBounds);
+        }));
     }
 
     private void goToMyLocation() {
-        map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
-            @Override
-            public void onMyLocationChange(@NonNull Location location) {
-                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
-                setFollowMyLocation(false);
-            }
+        map.setOnMyLocationChangeListener(location -> {
+            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+            setFollowMyLocation(false);
         });
     }
 
-    private void setFollowMyLocation(boolean shouldFollow) {
+    public void setFollowMyLocation(boolean shouldFollow) {
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true);
         int colorOff = ContextCompat.getColor(this, typedValue.resourceId);
@@ -468,24 +409,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         int colorOn = ContextCompat.getColor(this, typedValue.resourceId);
         float zoomLevel = (map.getCameraPosition().zoom > 14) ? map.getCameraPosition().zoom : 14;
 
-        if(shouldFollow) {
+        if (shouldFollow) {
             isFollowingLocation = true;
-            if(map.getMyLocation() != null) {
+            if (map.getMyLocation() != null) {
                 LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
             }
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
-            map.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
-                @Override
-                public void onMyLocationChange(@NonNull Location location) {
-                    if(!mapIsMoving) {
-                        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                        //if speed higher that 4m/s, zoom in a little less. We assume the user is moving in a car.
-                        if(location.hasSpeed())
-                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, (location.getSpeed() > 4) ? 12 : zoomLevel));
-                        else
-                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
-                    }
+            map.setOnMyLocationChangeListener(location -> {
+                if (!uiHandler.mapIsMoving) {
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    //if speed higher that 4m/s, zoom in a little less. We assume the user is moving in a car.
+                    if (location.hasSpeed())
+                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, (location.getSpeed() > 4) ? 12 : zoomLevel));
+                    else
+                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
                 }
             });
         } else {
@@ -513,6 +451,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setUpClusterer() {
+        runOnUiThread(() -> {
         clusterManager = new ClusterManager<>(this, map);
         clusterManager.setAnimation(true);
         CustomClusterRenderer renderer = new CustomClusterRenderer(this, map, clusterManager);
@@ -521,60 +460,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this)));
         addItemsToClusterer();
         handleMapInteractions(clusterManager, map, renderer);
-
+        });
     }
 
     private void handleMapInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomClusterRenderer renderer) {
-        map.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
-            @Override
-            public void onCameraIdle() {
-                /*if(map.getCameraPosition().zoom > 18) {
-                    if(clusterManager.getRenderer() instanceof CustomClusterRenderer)
-                        clusterManager.setRenderer(new NoClusterRenderer(MapsActivity.this, map, clusterManager));
-                } else {
-                    if(clusterManager.getRenderer() instanceof  NoClusterRenderer)
-                        clusterManager.setRenderer(new CustomClusterRenderer(MapsActivity.this, map, clusterManager));
-                }*/
-                clusterManager.onCameraIdle();
-                handler.removeCallbacks(runnable);
-                mapIsMoving = false;
-
-                    runnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if(!controlsHidden) moveCardUp();
-                        }
-                    };
-                    handler.postDelayed(runnable, 3000);
-                }
+        map.setOnCameraIdleListener(() -> {
+            clusterManager.onCameraIdle();
+            uiHandler.onCameraIdle();
         });
 
-        map.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
-            @Override
-            public void onCameraMoveStarted(int reason) {
-                mapIsMoving = true;
+        map.setOnCameraMoveStartedListener(reason -> uiHandler.onCameraMoveStart(reason));
 
-                if(reason == GoogleMap.OnCameraMoveStartedListener.REASON_API_ANIMATION ||
-                        reason == GoogleMap.OnCameraMoveStartedListener.REASON_DEVELOPER_ANIMATION) return;
-                else {
-                    handler.removeCallbacks(runnable);
-                    if (controlsHidden) moveCardDown();
-                    setFollowMyLocation(false);
-                }
-            }
-        });
-
-        clusterManager.setOnClusterItemInfoWindowClickListener(new ClusterManager.OnClusterItemInfoWindowClickListener<ClusterMarker>() {
-            @Override
-            public void onClusterItemInfoWindowClick(ClusterMarker item) {
-                onSpotWindowClick(item);
-                setFollowMyLocation(false);
-            }
+        clusterManager.setOnClusterItemInfoWindowClickListener(item -> {
+            onSpotWindowClick(item);
+            setFollowMyLocation(false);
         });
 
         clusterManager.setOnClusterItemClickListener(new ClusterManager.OnClusterItemClickListener<ClusterMarker>() {
             Marker currentShown;
-
             @Override
             public boolean onClusterItemClick(ClusterMarker item) {
                 setFollowMyLocation(false);
@@ -583,7 +486,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (marker.equals(currentShown)) {
                     marker.hideInfoWindow();
                     currentShown = null;
-                    isInfoWindowShown = true;
+                    uiHandler.isInfoWindowShown = true;
                 } else {
                     marker.showInfoWindow();
                     currentShown = marker;
@@ -595,7 +498,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onInfoWindowClose(@NonNull Marker marker) {
                 setFollowMyLocation(false);
-                isInfoWindowShown = false;
+                uiHandler.isInfoWindowShown = false;
             }
         });
         clusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<ClusterMarker>() {
@@ -617,10 +520,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 startActivity(i);
             }
         });
+
         //favoriting stuff
         clusterManager.setOnClusterItemInfoWindowLongClickListener(new ClusterManager.OnClusterItemInfoWindowLongClickListener<ClusterMarker>() {
             @Override
             public void onClusterItemInfoWindowLongClick(ClusterMarker item) {
+                assert item.getSnippet() != null;
                 String url = item.getSnippet().split("!!!")[0];
 
                 Dialog dialog = new Dialog(MapsActivity.this);
@@ -629,61 +534,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 dialog.show();
 
                 MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-                if (url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
-                openBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                        Intent i = new Intent(Intent.ACTION_VIEW);
-                        i.setData(Uri.parse(url));
-                        startActivity(i);
-                    }
+                if (url.contains("flickr.com")) openBtn.setText(R.string.show_on_flickr_com);
+                openBtn.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    Intent i = new Intent(Intent.ACTION_VIEW);
+                    i.setData(Uri.parse(url));
+                    startActivity(i);
                 });
 
                 MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
-                directions.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                        intent.setPackage("com.google.android.apps.maps");
-                        startActivity(intent);
-                        dialog.dismiss();
-                    }
+                directions.setOnClickListener(v -> {
+                    String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                    intent.setPackage("com.google.android.apps.maps");
+                    startActivity(intent);
+                    dialog.dismiss();
                 });
 
                 MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
-                favoriteBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                        if (favoritesContains(item)) {
-                            Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
-                        clusterManager.addItem(item);
-                        favorites.add(item);
-                        Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
-                        refreshFavorites();
-                        saveFavorites();
+                favoriteBtn.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    if (favoritesContains(item)) {
+                        Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
+                        return;
                     }
+
+                    item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
+                    clusterManager.addItem(item);
+                    favorites.add(item);
+                    Toast.makeText(MapsActivity.this, "Added to favorites!", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
+                    refreshFavorites();
+                    saveFavorites();
                 });
 
                 MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
-                dismiss.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                    }
-                });
+                dismiss.setOnClickListener(v -> dialog.dismiss());
             }
         });
     }
 
     private void onSpotWindowClick(ClusterMarker item) {
+        assert item.getSnippet() != null;
         String url = item.getSnippet().split("!!!")[0];
         boolean isFavorite = item.getSnippet().contains(Constants.FAVE_STRING);
 
@@ -693,122 +585,46 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         dialog.show();
 
         MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-        if (url.contains("flickr.com")) openBtn.setText("Show on flickr.com");
-        openBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.dismiss();
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setData(Uri.parse(url));
-                context.startActivity(i);
-            }
+        if (url.contains("flickr.com")) openBtn.setText(R.string.show_on_flickr_com);
+        openBtn.setOnClickListener(v -> {
+            dialog.dismiss();
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(url));
+            context.startActivity(i);
         });
 
         MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
-        directions.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                intent.setPackage("com.google.android.apps.maps");
-                context.startActivity(intent);
-                dialog.dismiss();
-            }
+        directions.setOnClickListener(v -> {
+            String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+            intent.setPackage("com.google.android.apps.maps");
+            startActivity(intent);
+            dialog.dismiss();
         });
 
         MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
-        if(isFavorite) {
+        if (isFavorite) {
             favoriteBtn.setEnabled(false);
-            favoriteBtn.setText("Already added to favourites");
+            favoriteBtn.setText(R.string.already_added_to_favourites);
         }
-        favoriteBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.dismiss();
-                if (favoritesContains(item)) {
-                    Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
-                clusterManager.addItem(item);
-                favorites.add(item);
-                Toast.makeText(context, "Added to favorites!", Toast.LENGTH_SHORT).show();
-                Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
-                refreshFavorites();
-                saveFavorites();
+        favoriteBtn.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (favoritesContains(item)) {
+                Toast.makeText(context, "Already added to favourites!", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            item.setSnippet(item.getSnippet() + Constants.FAVE_STRING);
+            clusterManager.addItem(item);
+            favorites.add(item);
+            Toast.makeText(context, "Added to favorites!", Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "onClusterItemInfoWindowLongClick: adding " + item.getSnippet());
+            refreshFavorites();
+            saveFavorites();
         });
 
         MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
-        dismiss.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.dismiss();
-            }
-        });
-    }
-
-    private void moveCardDown() {
-
-        if(uiIsTransitioning || drawerLayout.isOpen()) return;
-        float moveDistance = 0f;
-        ObjectAnimator animation = ObjectAnimator.ofFloat(cardview, "translationY", moveDistance);
-        animation.setDuration(300);
-        animation.setInterpolator(new OvershootInterpolator());
-        animation.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-                uiIsTransitioning = true;
-            }
-
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                controlsHidden = false;
-                uiIsTransitioning = false;
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animation) {
-
-            }
-        });
-        animation.start();
-        flickrBtn.show();
-    }
-
-    private void moveCardUp() {
-        if(uiIsTransitioning || drawerLayout.isOpen() || cardview.hasFocus()) return;
-        float currentY = cardview.getY();
-        float moveDistance = -300f;
-        long animationDuration = 200;
-        TranslateAnimation animate = new TranslateAnimation(0, 0, 0, moveDistance);
-        animate.setInterpolator(new AccelerateDecelerateInterpolator());
-        animate.setDuration(animationDuration);
-        animate.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-                uiIsTransitioning = true;
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                cardview.setY(currentY + moveDistance);
-                controlsHidden = true;
-                uiIsTransitioning = false;
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-            }
-        });
-        cardview.startAnimation(animate);
-        flickrBtn.hide();
+        dismiss.setOnClickListener(v -> dialog.dismiss());
     }
 
     private boolean favoritesContains(ClusterMarker item) {
@@ -823,26 +639,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void loadFavorites() {
-        favorites = new ArrayList<>();
-        SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
-        String faves_json = "";
-        if (preferences.contains(Constants.FAVS_PREF))
-            faves_json = preferences.getString(Constants.FAVS_PREF, "");
-        Gson gson = new Gson();
-        Type type = new TypeToken<List<ClusterMarker>>() {
-        }.getType();
+        runOnUiThread(() -> {
+            favorites = new ArrayList<>();
+            SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
+            String faves_json = "";
+            if (preferences.contains(Constants.FAVS_PREF))
+                faves_json = preferences.getString(Constants.FAVS_PREF, "");
+            Gson gson = new Gson();
+            Type type = new TypeToken<List<ClusterMarker>>() {
+            }.getType();
 
-        Log.d(TAG, "loadFavorites: Loaded json: " + faves_json);
+            Log.d(TAG, "loadFavorites: Loaded json: " + faves_json);
 
-        if (!faves_json.equals("")) favorites = gson.fromJson(faves_json, type);
+            if (!faves_json.equals("")) favorites = gson.fromJson(faves_json, type);
 
-        if (!favorites.isEmpty()) {
-            for (ClusterMarker faveMarker : favorites) {
-                clusterManager.addItem(faveMarker);
+            if (!favorites.isEmpty()) {
+                for (ClusterMarker faveMarker : favorites) {
+                    clusterManager.addItem(faveMarker);
+                }
+                clusterManager.onCameraIdle();
             }
-            clusterManager.onCameraIdle(); //idk y, but this updates the map and therefor the items on it.
-        }
-        saveFavorites();
+            saveFavorites();
+        });
     }
 
     void saveFavorites() {
@@ -858,20 +676,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         editor.apply();
     }
 
-    void removeFromFavorites(ClusterMarker toRemove) {
-        ArrayList<ClusterMarker> tempFavorites = favorites;
-        for (int i = 0; i < favorites.size(); i++) {
-            ClusterMarker toCompare = favorites.get(i);
-            if (toCompare.getSnippet().equals(toRemove.getSnippet()))
-                tempFavorites.remove(toRemove);
-        }
-        favorites = tempFavorites;
-        saveFavorites();
-    }
-
     private void addItemsToClusterer() {
         ArrayList<ClusterMarker> markers = new ArrayList<>();
-        for (Spot spot : InOutOperations.spots) {
+        for (Spot spot : inOutOperator.spots) {
             ClusterMarker marker = new ClusterMarker(new LatLng(spot.getLat(), spot.getLng()), spot);
             markers.add(marker);
         }
@@ -890,27 +697,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch(requestCode) {
-            case Constants.LOCATION_PERMS_CODE:
-                SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
-                SharedPreferences.Editor editor = preferences.edit();
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    locationFab.setVisibility(View.VISIBLE);
-                    map.setMyLocationEnabled(true);
+        if (requestCode == Constants.LOCATION_PERMS_CODE) {
+            SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
+            SharedPreferences.Editor editor = preferences.edit();
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                locationFab.setVisibility(View.VISIBLE);
+                map.setMyLocationEnabled(true);
 
-                    editor.putBoolean(Constants.LOCATION_ENABLED_PREF, true);
-                    editor.apply();
-                } else {
-                    Toast.makeText(context, "Permission was denied!", Toast.LENGTH_SHORT).show();
-                    locationFab.setVisibility(View.INVISIBLE);
-                    map.setMyLocationEnabled(false);
+                editor.putBoolean(Constants.LOCATION_ENABLED_PREF, true);
+                editor.apply();
+            } else {
+                Toast.makeText(context, "Permission was denied!", Toast.LENGTH_SHORT).show();
+                locationFab.setVisibility(View.INVISIBLE);
+                map.setMyLocationEnabled(false);
 
-                    editor.putBoolean(Constants.LOCATION_ENABLED_PREF, false);
-                    editor.apply();
-                }
-                ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setChecked(map.isMyLocationEnabled());
-                break;
+                editor.putBoolean(Constants.LOCATION_ENABLED_PREF, false);
+                editor.apply();
+            }
+            ((MaterialSwitch) drawer.getMenu().findItem(R.id.drawer_myLocation).getActionView()).setChecked(map.isMyLocationEnabled());
         }
     }
 }

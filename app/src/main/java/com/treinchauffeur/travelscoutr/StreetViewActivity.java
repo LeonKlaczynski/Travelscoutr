@@ -1,4 +1,4 @@
-package com.klaczynski.travelscoutr;
+package com.treinchauffeur.travelscoutr;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,6 +10,8 @@ import com.google.android.gms.maps.StreetViewPanorama;
 import com.google.android.gms.maps.SupportStreetViewPanoramaFragment;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.Objects;
+
 public class StreetViewActivity extends AppCompatActivity implements OnStreetViewPanoramaReadyCallback {
 
     StreetViewPanorama streetView;
@@ -18,12 +20,13 @@ public class StreetViewActivity extends AppCompatActivity implements OnStreetVie
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_street_view);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
         SupportStreetViewPanoramaFragment streetViewPanoramaFragment =
                 (SupportStreetViewPanoramaFragment) getSupportFragmentManager()
                         .findFragmentById(R.id.street_view);
+        assert streetViewPanoramaFragment != null;
         streetViewPanoramaFragment.getStreetViewPanoramaAsync(this);
 
     }
@@ -33,11 +36,6 @@ public class StreetViewActivity extends AppCompatActivity implements OnStreetVie
         this.streetView = streetViewPanorama;
         LatLng latLng = new LatLng(getIntent().getFloatExtra("lat", (float)00.000), getIntent().getFloatExtra("lng", (float)00.000));
         streetViewPanorama.setPosition(latLng, 500);
-
-        //Fancy camera panning to actual coordinates, don't even try..
-        /*streetViewPanorama.animateTo(new StreetViewPanoramaCamera(0, 0, bearing(getIntent().getFloatExtra("lat", (float)00.000), getIntent().getFloatExtra("lng", (float)00.000),
-                streetViewPanorama.getLocation().position.latitude, streetViewPanorama.getLocation().position.longitude)), 1);*/
-
     }
 
     protected static float bearing(double lat1, double lon1, double lat2, double lon2){

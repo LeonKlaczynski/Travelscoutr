@@ -2,7 +2,7 @@
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:map="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/drawerLayout"
+    android:id="@+id/rootView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MapsActivity"
@@ -23,7 +23,6 @@
             map:cardBackgroundColor="?attr/colorSurface"
             map:cardCornerRadius="40dp"
             map:strokeWidth="1dp"
-            map:strokeColor="?attr/colorSurface"
             map:layout_constraintTop_toTopOf="parent">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -93,6 +92,17 @@
                     android:tint="?attr/colorOnPrimaryContainer"
                     tools:ignore="UseAppTint"
                     android:contentDescription="@string/search_button" />
+
+                <ProgressBar
+                    android:id="@+id/progress_circular"
+                    style="?android:attr/progressBarStyleLarge"
+                    android:layout_width="30sp"
+                    android:layout_height="30sp"
+                    map:layout_constraintEnd_toEndOf="parent"
+                    map:layout_constraintTop_toTopOf="parent"
+                    map:layout_constraintBottom_toBottomOf="parent"
+                    android:visibility="gone">
+                </ProgressBar>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
