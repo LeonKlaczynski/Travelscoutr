@@ -49,4 +49,7 @@
     <string name="search_button">Search button</string>
     <string name="my_location_button">My location button</string>
     <string name="flickr_search">Flickr search</string>
+    <string name="already_added_to_favourites">Already added to favourites</string>
+    <string name="show_on_flickr_com">Show on flickr.com</string>
+    <string name="amount_of_spots_loaded">"Amount of spots loaded: "</string>
 </resources>
