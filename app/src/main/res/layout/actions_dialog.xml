@@ -2,6 +2,7 @@
 
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/dialogcardview"
     android:layout_width="300dp"
     android:layout_height="wrap_content"
@@ -19,7 +20,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Choose an option"
+            android:text="@string/choose_an_option"
             style="@style/TextAppearance.Material3.BodyLarge"
             android:layout_marginBottom="10dp"/>
 
@@ -27,33 +28,46 @@
             android:id="@+id/buttonShow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Show on locationscout.com"
+            android:text="@string/show_on_locationscout_com"
             android:drawableLeft="@drawable/ic_baseline_open_in_browser_15"
-            android:drawableTint="?attr/colorOnPrimary"/>
+            android:drawableTint="?attr/colorOnPrimary"
+            tools:ignore="RtlHardcoded" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonDirections"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Directions to spot"
+            android:text="@string/directions_to_spot"
             android:drawableLeft="@drawable/ic_baseline_directions_15"
-            android:drawableTint="?attr/colorOnPrimary"/>
+            android:drawableTint="?attr/colorOnPrimary"
+            tools:ignore="RtlHardcoded" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonAddFavorite"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Add to favourites"
+            android:text="@string/add_to_favourites"
             android:drawableLeft="@drawable/ic_baseline_favorite_15"
-            android:drawableTint="?attr/colorOnPrimary"/>
+            android:drawableTint="?attr/colorOnPrimary"
+            tools:ignore="RtlHardcoded" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonCoordinates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/copy_coordinates"
+            android:drawableLeft="@drawable/baseline_content_copy_15"
+            android:drawableTint="?attr/colorOnPrimary"
+            tools:ignore="RtlHardcoded" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonCancel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cancel"
+            android:text="@string/cancel"
             android:drawableLeft="@drawable/ic_baseline_cancel_15"
-            android:drawableTint="?attr/colorOnPrimary"/>
+            android:drawableTint="?attr/colorOnPrimary"
+            tools:ignore="RtlHardcoded" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

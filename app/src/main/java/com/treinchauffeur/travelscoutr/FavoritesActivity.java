@@ -2,7 +2,6 @@ package com.treinchauffeur.travelscoutr;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,10 +9,7 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.location.LocationManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.util.DisplayMetrics;
@@ -39,7 +35,6 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationBarView;
 import com.google.gson.Gson;
@@ -49,6 +44,7 @@ import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm
 import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
 import com.treinchauffeur.travelscoutr.ui.CustomFavClusterRenderer;
 import com.treinchauffeur.travelscoutr.ui.CustomInfoWindowAdapter;
+import com.treinchauffeur.travelscoutr.ui.SpotDialog;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,7 +62,7 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
     public static Context context;
     MaterialToolbar toolbar;
     LocationManager lm;
-    ArrayList<ClusterMarker> favorites = new ArrayList<>();
+    public ArrayList<ClusterMarker> favorites = new ArrayList<>();
 
     NavigationBarView navBar;
     Menu navMenu;
@@ -124,6 +120,7 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
             map.animateCamera(cu);
         } else if(map.isMyLocationEnabled()) {
             float zoomLevel = (map.getCameraPosition().zoom > 14) ? map.getCameraPosition().zoom : 14;
+
             if(map.getMyLocation() != null) {
                 LatLng latLng = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
@@ -237,48 +234,8 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
     private void handleInteractions(ClusterManager<ClusterMarker> clusterManager, GoogleMap map, CustomFavClusterRenderer renderer) {
         map.setOnCameraIdleListener(clusterManager);
         clusterManager.setOnClusterItemInfoWindowClickListener(item -> {
-            assert item.getSnippet() != null;
-            String url = item.getSnippet().split("!!!")[0];
-
-            Dialog dialog = new Dialog(FavoritesActivity.this);
-            dialog.setContentView(R.layout.actions_dialog);
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            SpotDialog dialog = new SpotDialog(this, FavoritesActivity.this, item);
             dialog.show();
-
-            MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-            if(url.contains("flickr.com")) openBtn.setText(R.string.show_on_flickr);
-            openBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setData(Uri.parse(url));
-                startActivity(i);
-            });
-
-            MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
-            directions.setOnClickListener(v -> {
-                String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                intent.setPackage("com.google.android.apps.maps");
-                startActivity(intent);
-                dialog.dismiss();
-            });
-
-            MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
-            favoriteBtn.setText(R.string.remove_from_favourites);
-            favoriteBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                if (item.getSnippet().contains(Constants.FAVE_STRING) || favorites.contains(item)) {
-                    removeFromFavorites(item);
-                    Toast.makeText(context, "Removed from favorites!", Toast.LENGTH_SHORT).show();
-                    refreshFavorites();
-                    return;
-                }
-                refreshFavorites();
-                saveFavorites();
-            });
-
-            MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
-            dismiss.setOnClickListener(v -> dialog.dismiss());
         });
         clusterManager.setOnClusterItemClickListener(new ClusterManager.OnClusterItemClickListener<ClusterMarker>() {
             Marker currentShown;
@@ -311,57 +268,17 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         });
         //favoriting stuff
         clusterManager.setOnClusterItemInfoWindowLongClickListener(item -> {
-            assert item.getSnippet() != null;
-            String url = item.getSnippet().split("!!!")[0];
-
-            Dialog dialog = new Dialog(FavoritesActivity.this);
-            dialog.setContentView(R.layout.actions_dialog);
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            SpotDialog dialog = new SpotDialog(this, FavoritesActivity.this, item);
             dialog.show();
-
-            MaterialButton openBtn = dialog.findViewById(R.id.buttonShow);
-            if(url.contains("flickr.com")) openBtn.setText(R.string.show_on_flickr);
-            openBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setData(Uri.parse(url));
-                startActivity(i);
-            });
-
-            MaterialButton directions = dialog.findViewById(R.id.buttonDirections);
-            directions.setOnClickListener(v -> {
-                String uri = "google.navigation:q=" + item.getPosition().latitude + "," + item.getPosition().longitude;
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                intent.setPackage("com.google.android.apps.maps");
-                startActivity(intent);
-                dialog.dismiss();
-            });
-
-            MaterialButton favoriteBtn = dialog.findViewById(R.id.buttonAddFavorite);
-            favoriteBtn.setText(R.string.remove_from_favourites);
-            favoriteBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                if (item.getSnippet().contains(Constants.FAVE_STRING) || favorites.contains(item)) {
-                    removeFromFavorites(item);
-                    Toast.makeText(context, "Removed from favorites!", Toast.LENGTH_SHORT).show();
-                    refreshFavorites();
-                    return;
-                }
-                refreshFavorites();
-                saveFavorites();
-            });
-
-            MaterialButton dismiss = dialog.findViewById(R.id.buttonCancel);
-            dismiss.setOnClickListener(v -> dialog.dismiss());
         });
     }
 
-    void refreshFavorites() {
+    public void refreshFavorites() {
         clusterManager.cluster();
         toolbar.setSubtitle("Amount of favourites loaded: "+favorites.size());
     }
 
-    private void loadFavorites() {
+    public void loadFavorites() {
         favorites = new ArrayList<>();
         SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
         String faves_json = "";
@@ -389,7 +306,7 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
             Log.e(TAG, "loadFavorites: No favourites found, reverting to raw file");
             try {
                 loadFavoritesFromRaw();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
 
             }
         }
@@ -400,6 +317,7 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         InputStream in_s = res.openRawResource(R.raw.testfavourites);
 
         byte[] b = new byte[in_s.available()];
+        //noinspection ResultOfMethodCallIgnored
         in_s.read(b);
 
         String faves_json = new String(b);
@@ -424,7 +342,7 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         refreshFavorites();
     }
 
-    void saveFavorites() {
+    public void saveFavorites() {
         SharedPreferences preferences = getSharedPreferences(Constants.PREFS, MODE_PRIVATE);
         Gson gson = new Gson();
 
@@ -437,7 +355,7 @@ public class FavoritesActivity extends FragmentActivity implements OnMapReadyCal
         editor.apply();
     }
 
-    void removeFromFavorites(ClusterMarker toRemove) {
+    public void removeFromFavorites(ClusterMarker toRemove) {
         ArrayList<ClusterMarker> tempFavorites = favorites;
         for(int i = 0; i < favorites.size(); i++) {
             ClusterMarker toCompare = favorites.get(i);
