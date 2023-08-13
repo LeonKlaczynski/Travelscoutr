@@ -11,7 +11,7 @@ import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.treinchauffeur.travelscoutr.Constants;
+import com.treinchauffeur.travelscoutr.Credentials;
 import com.treinchauffeur.travelscoutr.MapsActivity;
 import com.treinchauffeur.travelscoutr.ui.UserInterfaceHandler;
 
@@ -43,7 +43,7 @@ public class PlacesSearcher {
         try {
             String requestURL = "https://api.tomtom.com/search/2/search/" +
                     URLEncoder.encode(query) +
-                    ".json?key=" + Constants.TOMTOMKEY;
+                    ".json?key=" + Credentials.TOMTOMKEY;
 
             StringRequest stringRequest = new StringRequest(Request.Method.GET, requestURL,
                     response -> {

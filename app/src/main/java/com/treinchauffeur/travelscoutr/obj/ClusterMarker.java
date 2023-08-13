@@ -1,5 +1,7 @@
 package com.treinchauffeur.travelscoutr.obj;
 
+import androidx.annotation.Nullable;
+
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.clustering.ClusterItem;
 
@@ -29,6 +31,12 @@ public class ClusterMarker implements ClusterItem {
     @Override
     public String getSnippet() {
         return snippet;
+    }
+
+    @Nullable
+    @Override
+    public Float getZIndex() {
+        return null;
     }
 
     public Spot getSpot() {

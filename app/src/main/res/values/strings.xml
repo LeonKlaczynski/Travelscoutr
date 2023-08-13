@@ -54,4 +54,10 @@
     <string name="amount_of_spots_loaded">"Amount of spots loaded: "</string>
     <string name="remove_from_favourites">Remove from favourites</string>
     <string name="show_on_flickr">Show on flickr</string>
+    <string name="choose_an_option">Choose an option</string>
+    <string name="show_on_locationscout_com">Show on locationscout.com</string>
+    <string name="directions_to_spot">Directions to spot</string>
+    <string name="add_to_favourites">Add to favourites</string>
+    <string name="copy_coordinates">Copy coordinates</string>
+    <string name="cancel">Cancel</string>
 </resources>

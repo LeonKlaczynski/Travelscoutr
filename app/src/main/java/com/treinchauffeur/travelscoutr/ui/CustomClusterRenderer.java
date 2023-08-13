@@ -71,7 +71,7 @@ public class CustomClusterRenderer extends DefaultClusterRenderer<ClusterMarker>
     }
 
     @Override
-    protected int getColor(int clusterSize) {
+    public int getColor(int clusterSize) {
         TypedValue typedValue = new TypedValue();
         Resources.Theme theme = context.getTheme();
         theme.resolveAttribute(com.google.android.material.R.attr.colorTertiaryContainer, typedValue, true);
