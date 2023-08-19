@@ -43,7 +43,7 @@ public class PlacesSearcher {
         try {
             String requestURL = "https://api.tomtom.com/search/2/search/" +
                     URLEncoder.encode(query) +
-                    ".json?key=" + Credentials.TOMTOMKEY;
+                    ".json?key=" + Credentials.TOMTOM_KEY;
 
             StringRequest stringRequest = new StringRequest(Request.Method.GET, requestURL,
                     response -> {

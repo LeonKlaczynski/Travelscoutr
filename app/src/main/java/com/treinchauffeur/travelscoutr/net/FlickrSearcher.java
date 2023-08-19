@@ -1,18 +1,22 @@
 package com.treinchauffeur.travelscoutr.net;
 
 import android.content.Context;
+import android.sax.Element;
 import android.util.Log;
 
 import com.flickr4java.flickr.Flickr;
+import com.flickr4java.flickr.FlickrRuntimeException;
 import com.flickr4java.flickr.REST;
 import com.flickr4java.flickr.photos.Photo;
 import com.flickr4java.flickr.photos.PhotoList;
 import com.flickr4java.flickr.photos.PhotosInterface;
 import com.flickr4java.flickr.photos.SearchParameters;
+import com.flickr4java.flickr.test.TestInterface;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.android.clustering.ClusterManager;
 import com.treinchauffeur.travelscoutr.Constants;
+import com.treinchauffeur.travelscoutr.Credentials;
 import com.treinchauffeur.travelscoutr.MapsActivity;
 import com.treinchauffeur.travelscoutr.R;
 import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
@@ -41,8 +45,7 @@ public class FlickrSearcher {
     public FlickrSearcher(Context context, MapsActivity activity) {
         this.activity = activity;
         uiHandler = new UserInterfaceHandler(activity);
-        flickr = new Flickr(context.getString(R.string.flickrApiKey), context.getString(R.string.flickrApiSecret), new REST());
-        Log.d(TAG, "FlickrSearcher: " + context.getString(R.string.flickrApiKey));
+        flickr = new Flickr(Credentials.FLICKR_API_KEY, Credentials.FLICKR_API_SECRET, new REST());
     }
 
     /**
@@ -67,6 +70,7 @@ public class FlickrSearcher {
                 parameters.setExtras(Collections.singleton("geo"));
                 parameters.setBBox(String.valueOf(minLong), String.valueOf(minLat), String.valueOf(maxLong), String.valueOf(maxLat));
                 PhotoList<Photo> photoList = photosInterface.search(parameters, 250, 1);
+
 
                 ArrayList<ClusterMarker> markersToAdd = new ArrayList<>();
                 boolean hasDuplicates = false;
