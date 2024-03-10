@@ -25,6 +25,8 @@ import com.treinchauffeur.travelscoutr.MapsActivity;
 import com.treinchauffeur.travelscoutr.R;
 import com.treinchauffeur.travelscoutr.obj.ClusterMarker;
 
+import java.util.Objects;
+
 public class SpotDialog extends Dialog {
 
     public static final String TAG = "SpotDialog";
@@ -48,7 +50,7 @@ public class SpotDialog extends Dialog {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.actions_dialog);
-        getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        Objects.requireNonNull(getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         setButtonActions();
     }
 

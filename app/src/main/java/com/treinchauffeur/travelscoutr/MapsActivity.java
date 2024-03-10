@@ -69,6 +69,7 @@ import org.json.JSONException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -90,8 +91,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected Menu navMenu;
     private MaterialCardView cardView;
 
-    protected ExtendedFloatingActionButton flickrBtn;
-    private FloatingActionButton locationFab;
+    protected ExtendedFloatingActionButton flickrBtn, locationFab;
     private boolean isFollowingLocation = false;
     private boolean keepScreenAwake = false;
 
@@ -148,10 +148,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             if (inOutOperator.spots.size() == 0) {
-                Toast.makeText(context, "No spots were loaded. Network issues?", Toast.LENGTH_SHORT).show();
+                uiHandler.sendToast("No spots were loaded. Network issues?");
             } else {
                 setUpClusterer();
             }
+
             //Loading favorites from sharedpreferences
             loadFavorites();
 
@@ -177,8 +178,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         keepScreenAwake = preferences.getBoolean(Constants.WAKELOCK_PREF, false);
         drawerLayout.setKeepScreenOn(keepScreenAwake);
-        ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setChecked(keepScreenAwake);
-        ((MaterialSwitch) drawer.getMenu().findItem(R.id.keepAwake).getActionView()).setOnCheckedChangeListener((buttonView, isChecked) -> {
+        ((MaterialSwitch) Objects.requireNonNull(drawer.getMenu().findItem(R.id.keepAwake).getActionView())).setChecked(keepScreenAwake);
+        ((MaterialSwitch) Objects.requireNonNull(drawer.getMenu().findItem(R.id.keepAwake).getActionView())).setOnCheckedChangeListener((buttonView, isChecked) -> {
             SharedPreferences.Editor editor = preferences.edit();
             editor.putBoolean(Constants.WAKELOCK_PREF, isChecked);
             editor.apply();
@@ -393,6 +394,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoomLevel));
             }
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOn));
+            locationFab.extend();
             map.setOnMyLocationChangeListener(location -> {
                 if (!uiHandler.mapIsMoving) {
                     LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
@@ -406,6 +408,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             isFollowingLocation = false;
             locationFab.setBackgroundTintList(ColorStateList.valueOf(colorOff));
+            locationFab.shrink();
             map.setOnMyLocationChangeListener(null);
         }
     }
@@ -434,7 +437,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         CustomClusterRenderer renderer = new CustomClusterRenderer(this, map, clusterManager);
         clusterManager.setRenderer(renderer);
         clusterManager.setAlgorithm(new NonHierarchicalViewBasedAlgorithm<>(metrics.widthPixels, metrics.heightPixels));
-        clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this)));
+        clusterManager.getMarkerCollection().setInfoWindowAdapter(new CustomInfoWindowAdapter(LayoutInflater.from(this), uiHandler));
         addItemsToClusterer();
         handleMapInteractions(clusterManager, map, renderer);
         });
@@ -459,6 +462,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public boolean onClusterItemClick(ClusterMarker item) {
                 setFollowMyLocation(false);
                 Marker marker = renderer.getMarker(item);
+                uiHandler.setIsLoading(true);
                 Log.d(TAG, "Marker clicked: " + marker.getTitle());
                 if (marker.equals(currentShown)) {
                     marker.hideInfoWindow();
@@ -578,7 +582,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 editor.putBoolean(Constants.LOCATION_ENABLED_PREF, true);
                 editor.apply();
             } else {
-                Toast.makeText(context, "Permission was denied!", Toast.LENGTH_SHORT).show();
+                uiHandler.sendToast("Permission was denied!");
                 locationFab.setVisibility(View.INVISIBLE);
                 map.setMyLocationEnabled(false);
 

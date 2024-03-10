@@ -31,7 +31,6 @@ public class InOutOperator {
     public ArrayList<Spot> spots = new ArrayList<Spot>();
 
     private MapsActivity activity;
-    protected ViewGroup rootView;
     UserInterfaceHandler uiHandler;
 
     public InOutOperator(MapsActivity activity) {
@@ -59,7 +58,7 @@ public class InOutOperator {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(MapsActivity.context, "Failed to load new mapdata, using offline (old) version if available.", Toast.LENGTH_SHORT).show();
+            uiHandler.sendToast("Failed to load new mapdata, using offline (old) version if available.");
         }
 
         JSONArray array = null;
@@ -68,6 +67,7 @@ public class InOutOperator {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+        assert array != null;
         Logger.log(TAG, "JSON Array size: " + array.length());
         for (int i = 0; i < array.length(); i++) {
             Spot spot = new Spot("INVALID_NAME", 0.00000, 0.00000, "INVALID_URL", "INVALID_URL");
@@ -86,13 +86,16 @@ public class InOutOperator {
 
             if (!spot.getName().equals("INVALID_NAME"))
                 spots.add(spot);
-
         }
         uiHandler.setIsLoading(false);
         Logger.log(TAG, "Successfully loaded " + spots.size() + " objects!");
         //convert(); We don't care about geoJSON for now
     }
 
+    /**
+     * Converts locationscout map objects to geoJson
+     * @throws JSONException
+     */
     private void convert() throws JSONException {
         if (spots.size() == 0) {
             Logger.log(TAG, "ERROR, array size is 0?");

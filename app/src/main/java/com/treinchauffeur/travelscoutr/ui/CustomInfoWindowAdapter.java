@@ -23,10 +23,19 @@ import com.google.android.gms.maps.model.Marker;
 import com.treinchauffeur.travelscoutr.Constants;
 import com.treinchauffeur.travelscoutr.R;
 
+import java.util.Objects;
+
 public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
     private static final String TAG = "InfoWindowAdapter";
     private final LayoutInflater mInflater;
+
+    private UserInterfaceHandler uiHandler;
+
+    public CustomInfoWindowAdapter(LayoutInflater inflater, UserInterfaceHandler uiHandler) {
+        this.mInflater = inflater;
+        this.uiHandler = uiHandler;
+    }
 
     public CustomInfoWindowAdapter(LayoutInflater inflater) {
         this.mInflater = inflater;
@@ -34,6 +43,7 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
     @Override public View getInfoWindow(Marker marker) {
         final View popup = mInflater.inflate(R.layout.info_window_layout, null);
+        Log.d(TAG, "getInfoWindow: CALLED");
 
         ((TextView) popup.findViewById(R.id.title)).setText(marker.getTitle());
 
@@ -48,19 +58,21 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
             public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
                 // log exception
                 Log.e("TAG", "Error loading image", e);
+                if(uiHandler != null) uiHandler.setIsLoading(false);
                 if (e.getCauses().get(0) instanceof HttpException) {
-                    Toast.makeText(popup.getContext(), "Error loading image, http error code: " + ((HttpException) e.getCause()).getStatusCode(), Toast.LENGTH_SHORT).show();
-                    return false;
+                    Toast.makeText(popup.getContext(), "Error loading image, http error code: " +
+                            ((HttpException) Objects.requireNonNull(e.getCause())).getStatusCode(), Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(popup.getContext(), "Error loading image, try re-opening marker.", Toast.LENGTH_SHORT).show();
-                    return false;
                 }
+                return false;
             }
 
             @Override
             public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
                 if(!dataSource.equals(DataSource.MEMORY_CACHE)) {
                     marker.showInfoWindow();
+                    if(uiHandler != null) uiHandler.setIsLoading(false);
                 }
                 return false;
             }
@@ -70,6 +82,7 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
     @Override public View getInfoContents(Marker marker) {
         final View popup = mInflater.inflate(R.layout.info_window_layout, null);
+        Log.d(TAG, "getInfoWindow: CALLED2");
 
         ((TextView) popup.findViewById(R.id.title)).setText(marker.getTitle());
 
@@ -84,12 +97,14 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
             public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
                 // log exception
                 Log.e("TAG", "Error loading image", e);
+                if(uiHandler != null) uiHandler.setIsLoading(false);
                 return false;
             }
 
             @Override
             public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
                 //if(!dataSource.equals(DataSource.MEMORY_CACHE)) marker.showInfoWindow(); //Can't because of infinite loop
+                if(uiHandler != null) uiHandler.setIsLoading(false);
                 return false;
             }
         }).into(pictureView);

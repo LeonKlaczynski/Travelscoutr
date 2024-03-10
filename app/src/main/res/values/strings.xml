@@ -60,4 +60,5 @@
     <string name="add_to_favourites">Add to favourites</string>
     <string name="copy_coordinates">Copy coordinates</string>
     <string name="cancel">Cancel</string>
+    <string name="map_following_location">Map is following location</string>
 </resources>

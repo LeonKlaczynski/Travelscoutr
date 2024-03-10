@@ -83,7 +83,7 @@
                     android:id="@+id/cardSearchIcon"
                     android:layout_width="30sp"
                     android:layout_height="30sp"
-                    android:layout_marginRight="5dp"
+                    android:layout_marginEnd="5dp"
                     android:gravity="right"
                     android:background="@android:color/transparent"
                     android:src="@drawable/ic_baseline_search_30"
@@ -99,6 +99,7 @@
                     style="?android:attr/progressBarStyleLarge"
                     android:layout_width="30sp"
                     android:layout_height="30sp"
+                    android:layout_marginEnd="5dp"
                     map:layout_constraintEnd_toEndOf="parent"
                     map:layout_constraintTop_toTopOf="parent"
                     map:layout_constraintBottom_toBottomOf="parent"
@@ -118,13 +119,14 @@
             android:background="?attr/colorSecondaryContainer"
             tools:layout="@android:layout/activity_list_item"/>
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/locationFab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="20dp"
             android:clickable="true"
-            android:src="@drawable/ic_baseline_my_location_24"
+            android:text="@string/map_following_location"
+            map:icon="@drawable/ic_baseline_my_location_24"
             map:layout_constraintBottom_toTopOf="@+id/flickrFab"
             map:layout_constraintEnd_toEndOf="@+id/map"
             tools:ignore="SpeakableTextPresentCheck"
@@ -145,13 +147,12 @@
             map:layout_constraintBottom_toTopOf="@+id/navigationRailView"
             map:layout_constraintEnd_toEndOf="@+id/map" />
 
-
-
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/navigationRailView"
             android:layout_width="match_parent"
-            android:layout_height="75dp"
+            android:layout_height="95dp"
             android:fontFamily="@font/product_sans_regular"
+            android:paddingBottom="15dp"
             map:layout_constraintBottom_toBottomOf="parent"
             map:layout_constraintEnd_toEndOf="parent"
             map:layout_constraintStart_toStartOf="parent"
