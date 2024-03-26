@@ -23,10 +23,6 @@ import org.json.JSONObject;
 
 public class InOutOperator {
 
-    /**
-     * @author Leonk
-     * Attempts to download locationscout.net's JSON file & converts it to GeoJSON.
-     */
     static String TAG = "InOutOperations";
     public ArrayList<Spot> spots = new ArrayList<Spot>();
 
@@ -39,7 +35,7 @@ public class InOutOperator {
     }
 
     /**
-     *
+     * Downloads the original json data from locationscout.net & converts it all to Spot objects.
      * @throws JSONException
      */
     public void startConversion() throws JSONException {
